@@ -258,6 +258,7 @@ export default function RecordsPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<EditForm | null>(null);
   const [sidebarWidth, setSidebarWidth] = useState(320);
+  const [sidebarSearch, setSidebarSearch] = useState("");
 
   useEffect(() => {
     if (isInitialized === false || (isInitialized === true && !isLoggedIn)) {
@@ -393,6 +394,21 @@ export default function RecordsPage() {
   const urgentRecords = records.filter(isUrgentRecord);
   const completedRecords = records.filter(isCompletedRecord);
   const showStatusGroups = currentUser?.recordsScope !== "contract-only";
+  const normalizedSidebarSearch = sidebarSearch.trim().toLowerCase();
+  const matchesSidebarSearch = (label: string, items: RecordItem[]) => {
+    if (!normalizedSidebarSearch) {
+      return true;
+    }
+
+    const haystack = [
+      label,
+      ...items.flatMap((item) => [item.title, item.body || "", item.list, item.status, item.priority]),
+    ]
+      .join(" ")
+      .toLowerCase();
+
+    return haystack.includes(normalizedSidebarSearch);
+  };
   const orderedLists = LIST_ORDER.filter((listName) => {
     if (currentUser?.recordsScope === "contract-only") {
       return listName === "Contract" && groupedRecords[listName]?.length;
@@ -408,6 +424,13 @@ export default function RecordsPage() {
 
     return visibleItems.length > 0;
   });
+  const filteredOrderedLists = orderedLists.filter((listName) =>
+    matchesSidebarSearch(listName, groupedRecords[listName] || [])
+  );
+  const showUrgentShortcut =
+    showStatusGroups && matchesSidebarSearch("Urgent", urgentRecords);
+  const showFinishedShortcut =
+    showStatusGroups && matchesSidebarSearch("Finished", completedRecords);
   const sellerRecords = records.filter(isSellerLead);
   const pipelineCards = useMemo(() => getPipelineCards(sellerRecords), [sellerRecords]);
   const now = new Date();
@@ -830,7 +853,19 @@ export default function RecordsPage() {
                 </div>
               </div>
 
-              <div className="space-y-5 px-5 py-5">
+              <div className="max-h-[72vh] space-y-5 overflow-y-auto px-5 py-5 lg:max-h-[calc(100vh-10rem)]">
+                <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+                  <div className="text-xs font-semibold uppercase tracking-[0.2em] text-stone-500">
+                    Search
+                  </div>
+                  <input
+                    value={sidebarSearch}
+                    onChange={(event) => setSidebarSearch(event.target.value)}
+                    placeholder="Search list, record, contact, or status"
+                    className="mt-3 w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-slate-700 outline-none transition-colors focus:border-slate-400 focus:bg-white"
+                  />
+                </div>
+
                 <div className="rounded-2xl border border-stone-200 bg-[#f8f5ee] p-4">
                   <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
                     Pipeline Snapshot
@@ -911,8 +946,19 @@ export default function RecordsPage() {
                       Jump to Bottom
                     </a>
                   </div>
-                  {showStatusGroups ? (
-                    <>
+                </div>
+
+                <div className="rounded-2xl border border-stone-200 bg-[#f8f5ee] p-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <div className="text-xs font-semibold uppercase tracking-[0.2em] text-stone-500">
+                      Status Sections
+                    </div>
+                    <div className="text-xs text-stone-400">
+                      {Number(showUrgentShortcut) + Number(showFinishedShortcut)} shown
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    {showStatusGroups && showUrgentShortcut ? (
                       <a
                         href={`#${getStatusAnchor("Urgent")}`}
                         className="block rounded-2xl border border-red-200 bg-red-50 px-4 py-3 transition-colors hover:bg-red-100"
@@ -922,6 +968,8 @@ export default function RecordsPage() {
                           {urgentRecords.length} items
                         </div>
                       </a>
+                    ) : null}
+                    {showStatusGroups && showFinishedShortcut ? (
                       <a
                         href={`#${getStatusAnchor("Finished")}`}
                         className="block rounded-2xl border border-green-200 bg-green-50 px-4 py-3 transition-colors hover:bg-green-100"
@@ -931,20 +979,41 @@ export default function RecordsPage() {
                           {completedRecords.length} items
                         </div>
                       </a>
-                    </>
-                  ) : null}
-                  {orderedLists.map((listName) => (
-                    <a
-                      key={listName}
-                      href={`#${getListAnchor(listName)}`}
-                      className="block rounded-2xl border border-stone-200 bg-white px-4 py-3 transition-colors hover:border-stone-300 hover:bg-stone-50"
-                    >
-                      <div className="text-lg font-semibold text-slate-900">{listName}</div>
-                      <div className="mt-1 text-sm text-gray-600">
-                        {groupedRecords[listName].length} items
+                    ) : null}
+                    {showStatusGroups && !showUrgentShortcut && !showFinishedShortcut ? (
+                      <div className="rounded-2xl border border-dashed border-stone-300 bg-white px-4 py-3 text-sm text-stone-500">
+                        No status sections match this search.
                       </div>
-                    </a>
-                  ))}
+                    ) : null}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-stone-200 bg-[#f8f5ee] p-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <div className="text-xs font-semibold uppercase tracking-[0.2em] text-stone-500">
+                      Source Lists
+                    </div>
+                    <div className="text-xs text-stone-400">{filteredOrderedLists.length} shown</div>
+                  </div>
+                  <div className="space-y-3">
+                    {filteredOrderedLists.map((listName) => (
+                      <a
+                        key={listName}
+                        href={`#${getListAnchor(listName)}`}
+                        className="block rounded-2xl border border-stone-200 bg-white px-4 py-3 transition-colors hover:border-stone-300 hover:bg-stone-50"
+                      >
+                        <div className="text-lg font-semibold text-slate-900">{listName}</div>
+                        <div className="mt-1 text-sm text-gray-600">
+                          {groupedRecords[listName].length} items
+                        </div>
+                      </a>
+                    ))}
+                    {filteredOrderedLists.length === 0 ? (
+                      <div className="rounded-2xl border border-dashed border-stone-300 bg-white px-4 py-3 text-sm text-stone-500">
+                        No lists or records match this search.
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
               </div>
             </div>
