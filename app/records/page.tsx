@@ -520,21 +520,6 @@ export default function RecordsPage() {
               </select>
               <label className="rounded-2xl border border-stone-200 bg-white p-3 text-sm text-slate-600">
                 <div className="mb-2 text-[11px] uppercase tracking-[0.2em] text-stone-500">
-                  Last Contact Date
-                </div>
-                <input
-                  type="datetime-local"
-                  className="w-full bg-transparent outline-none"
-                  value={editForm.lastFollowedUpAt}
-                  onChange={(e) =>
-                    setEditForm((prev) =>
-                      prev ? { ...prev, lastFollowedUpAt: e.target.value } : prev
-                    )
-                  }
-                />
-              </label>
-              <label className="rounded-2xl border border-stone-200 bg-white p-3 text-sm text-slate-600">
-                <div className="mb-2 text-[11px] uppercase tracking-[0.2em] text-stone-500">
                   Next Follow-Up Date
                 </div>
                 <input
@@ -578,22 +563,6 @@ export default function RecordsPage() {
                       )
                     }
                   />
-                  <select
-                    className="rounded-2xl border border-stone-200 bg-white p-3"
-                    value={editForm.lastContactOutcome}
-                    onChange={(e) =>
-                      setEditForm((prev) =>
-                        prev ? { ...prev, lastContactOutcome: e.target.value } : prev
-                      )
-                    }
-                  >
-                    <option value="">Last Contact Outcome</option>
-                    {CONTACT_OUTCOME_OPTIONS.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
                 </>
               ) : null}
             </div>
@@ -716,28 +685,10 @@ export default function RecordsPage() {
                     {formatMoney(item.leadCost || 0)}
                   </div>
                 </div>
-                <div className="rounded-2xl bg-stone-50 px-4 py-3 md:col-span-2 xl:col-span-3">
-                  <div className="text-[11px] uppercase tracking-[0.2em] text-stone-500">
-                    Last Contact Outcome
-                  </div>
-                  <div className="mt-1 text-sm font-medium text-slate-900">
-                    {item.lastContactOutcome || "Not set"}
-                  </div>
-                </div>
               </div>
             ) : null}
 
-            <div className="mt-4 grid gap-3 text-sm text-gray-600 md:grid-cols-2">
-              <div className="rounded-2xl bg-stone-50 px-4 py-3">
-                <div className="text-[11px] uppercase tracking-[0.2em] text-stone-500">
-                  Last Contact Date
-                </div>
-                <div className="mt-1 font-medium text-slate-800">
-                  {item.lastFollowedUpAt
-                    ? new Date(item.lastFollowedUpAt).toLocaleString()
-                    : "Not set"}
-                </div>
-              </div>
+            <div className="mt-4 grid gap-3 text-sm text-gray-600">
               <div className="rounded-2xl bg-stone-50 px-4 py-3">
                 <div className="text-[11px] uppercase tracking-[0.2em] text-stone-500">
                   Next Follow-Up Date

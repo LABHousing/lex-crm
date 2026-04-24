@@ -458,17 +458,7 @@ export default function ScheduleTodayPage() {
           ) : null}
         </div>
 
-        <div className="mt-4 grid gap-3 text-sm text-gray-600 md:grid-cols-2 xl:grid-cols-3">
-          <div className="rounded-xl bg-stone-50 p-4">
-            <div className="text-[11px] uppercase tracking-[0.2em] text-stone-500">
-              Last Contact
-            </div>
-            <div className="mt-1 font-medium text-slate-800">
-              {card.lastContactDate
-                ? new Date(card.lastContactDate).toLocaleString()
-                : "Not set"}
-            </div>
-          </div>
+        <div className="mt-4 grid gap-3 text-sm text-gray-600">
           <div className="rounded-xl bg-stone-50 p-4">
             <div className="text-[11px] uppercase tracking-[0.2em] text-stone-500">
               Next Follow-Up
@@ -477,14 +467,6 @@ export default function ScheduleTodayPage() {
               {card.nextFollowUpDate || card.dueAt
                 ? new Date(card.nextFollowUpDate || card.dueAt || "").toLocaleString()
                 : "Not set"}
-            </div>
-          </div>
-          <div className="rounded-xl bg-stone-50 p-4 md:col-span-2 xl:col-span-3">
-            <div className="text-[11px] uppercase tracking-[0.2em] text-stone-500">
-              Last Contact Outcome
-            </div>
-            <div className="mt-1 font-medium text-slate-800">
-              {card.lastContactOutcome || "Not set"}
             </div>
           </div>
           <div className="rounded-xl bg-stone-50 p-4 md:col-span-2 xl:col-span-3">
@@ -609,23 +591,13 @@ export default function ScheduleTodayPage() {
                 className="rounded-lg border px-3 py-2 text-sm"
               />
               <input
-                type="datetime-local"
-                value={editForm.lastContactDate}
-                onChange={(event) =>
-                  setEditForm((prev) =>
-                    prev ? { ...prev, lastContactDate: event.target.value } : prev
-                  )
-                }
-                className="rounded-lg border px-3 py-2 text-sm"
-              />
-              <input
                 value={editForm.lastContactOutcome}
                 onChange={(event) =>
                   setEditForm((prev) =>
                     prev ? { ...prev, lastContactOutcome: event.target.value } : prev
                   )
                 }
-                placeholder="Last contact outcome"
+                placeholder="Outcome"
                 className="rounded-lg border px-3 py-2 text-sm md:col-span-2"
               />
               <textarea
