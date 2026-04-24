@@ -231,6 +231,14 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    await prisma.record.update({
+      where: { id: record.id },
+      data: {
+        priority,
+        followUpAt: dueAt ?? record.followUpAt,
+      },
+    });
+
     return Response.json({ success: true, card });
   } catch (error) {
     console.error("Failed to create schedule card", error);

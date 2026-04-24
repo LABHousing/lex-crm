@@ -49,6 +49,10 @@ type EditForm = {
   suggestedMessage: string;
   suggestedCallOpener: string;
   dueAt: string;
+  lastContactDate: string;
+  nextFollowUpDate: string;
+  lastContactOutcome: string;
+  notesSummary: string;
   completed: boolean;
 };
 
@@ -134,6 +138,10 @@ function buildEditForm(card: ScheduleCard): EditForm {
     suggestedMessage: card.suggestedMessage || "",
     suggestedCallOpener: card.suggestedCallOpener || "",
     dueAt: toLocalDateTimeValue(card.dueAt),
+    lastContactDate: card.lastContactDate ? card.lastContactDate.slice(0, 10) : "",
+    nextFollowUpDate: card.nextFollowUpDate ? card.nextFollowUpDate.slice(0, 10) : "",
+    lastContactOutcome: card.lastContactOutcome || "",
+    notesSummary: card.notesSummary || "",
     completed: card.completed,
   };
 }
@@ -590,6 +598,36 @@ export default function ScheduleTodayPage() {
                 }
                 className="rounded-lg border px-3 py-2 text-sm"
               />
+              <input
+                type="date"
+                value={editForm.lastContactDate}
+                onChange={(event) =>
+                  setEditForm((prev) =>
+                    prev ? { ...prev, lastContactDate: event.target.value } : prev
+                  )
+                }
+                className="rounded-lg border px-3 py-2 text-sm"
+              />
+              <input
+                type="date"
+                value={editForm.nextFollowUpDate}
+                onChange={(event) =>
+                  setEditForm((prev) =>
+                    prev ? { ...prev, nextFollowUpDate: event.target.value } : prev
+                  )
+                }
+                className="rounded-lg border px-3 py-2 text-sm"
+              />
+              <input
+                value={editForm.lastContactOutcome}
+                onChange={(event) =>
+                  setEditForm((prev) =>
+                    prev ? { ...prev, lastContactOutcome: event.target.value } : prev
+                  )
+                }
+                placeholder="Last contact outcome"
+                className="rounded-lg border px-3 py-2 text-sm md:col-span-2"
+              />
               <textarea
                 value={editForm.reason}
                 onChange={(event) =>
@@ -599,6 +637,17 @@ export default function ScheduleTodayPage() {
                 }
                 placeholder="Why this is on the list"
                 rows={3}
+                className="rounded-lg border px-3 py-2 text-sm md:col-span-2"
+              />
+              <textarea
+                value={editForm.notesSummary}
+                onChange={(event) =>
+                  setEditForm((prev) =>
+                    prev ? { ...prev, notesSummary: event.target.value } : prev
+                  )
+                }
+                placeholder="Notes / summary"
+                rows={4}
                 className="rounded-lg border px-3 py-2 text-sm md:col-span-2"
               />
               <textarea

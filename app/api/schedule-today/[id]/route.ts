@@ -21,6 +21,33 @@ function normalizeDueAt(value: unknown) {
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 }
 
+function parseDateOnly(value: unknown) {
+  if (value === null || value === "") {
+    return null;
+  }
+
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
+
+function parseRecordId(leadId: string) {
+  if (!leadId.startsWith("record-")) {
+    return null;
+  }
+
+  const parsed = Number(leadId.replace("record-", ""));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function buildRecordTitle(sellerName: string | null, phone: string | null, fallback: string) {
+  const nextTitle = [sellerName, phone].filter(Boolean).join(" ").trim();
+  return nextTitle || fallback;
+}
+
 export async function PATCH(
   req: NextRequest,
   ctx: RouteContext<"/api/schedule-today/[id]">
@@ -39,6 +66,14 @@ export async function PATCH(
 
     const { id } = await ctx.params;
     const data = await req.json();
+    const existingCard = await prisma.scheduleTodayCard.findUnique({
+      where: { id: Number(id) },
+    });
+
+    if (!existingCard) {
+      return Response.json({ error: "Schedule card not found" }, { status: 404 });
+    }
+
     const updateData: Record<string, unknown> = {};
 
     if (typeof data.sellerName === "string") {
@@ -93,6 +128,58 @@ export async function PATCH(
       where: { id: Number(id) },
       data: updateData,
     });
+
+    const recordId = parseRecordId(existingCard.leadId);
+    if (recordId !== null) {
+      const existingRecord = await prisma.record.findUnique({
+        where: { id: recordId },
+      });
+
+      if (existingRecord) {
+        const nextLastContactDate = parseDateOnly(data.lastContactDate);
+        const nextFollowUpDate = parseDateOnly(data.nextFollowUpDate);
+        const nextPriority =
+          typeof data.priority === "string" && allowedPriorities.has(data.priority)
+            ? data.priority
+            : existingRecord.priority;
+        const nextNotesSummary =
+          typeof data.notesSummary === "string" ? data.notesSummary.trim() || null : existingRecord.body;
+        const nextTitle = buildRecordTitle(
+          typeof data.sellerName === "string" ? data.sellerName.trim() || null : existingCard.sellerName,
+          typeof data.phone === "string" ? data.phone.trim() || null : existingCard.phone,
+          existingRecord.title
+        );
+
+        const followUpTouched =
+          nextLastContactDate !== undefined &&
+          `${existingRecord.lastFollowedUpAt?.toISOString() ?? ""}` !==
+            `${nextLastContactDate?.toISOString() ?? ""}`;
+
+        await prisma.record.update({
+          where: { id: recordId },
+          data: {
+            title: nextTitle,
+            body: nextNotesSummary,
+            priority: nextPriority,
+            lastContactOutcome:
+              typeof data.lastContactOutcome === "string"
+                ? data.lastContactOutcome.trim() || null
+                : existingRecord.lastContactOutcome,
+            lastFollowedUpAt:
+              nextLastContactDate !== undefined ? nextLastContactDate : existingRecord.lastFollowedUpAt,
+            followUpAt:
+              nextFollowUpDate !== undefined
+                ? nextFollowUpDate
+                : dueAt !== undefined
+                  ? dueAt
+                  : existingRecord.followUpAt,
+            followUpCount: followUpTouched
+              ? existingRecord.followUpCount + 1
+              : existingRecord.followUpCount,
+          },
+        });
+      }
+    }
 
     return Response.json(card);
   } catch (error) {
