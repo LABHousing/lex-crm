@@ -24,6 +24,17 @@ const RECORD_LIST_OPTIONS = [
   "Dead",
 ] as const;
 
+const LEAD_NOTES_TEMPLATE = `Asking price:
+What can you tell about the property?
+sq.ft beds bath
+What’s got you thinking about selling?:
+What happens if it doesn’t sell?:
+Timeline:
+What kind of updates or repairs does the property need?:
+HOA:
+Occupancy:
+If we could make this simple and close quickly, how flexible are you on price?:`;
+
 export default function LeadsPage() {
   const router = useRouter();
   const { isLoggedIn, isInitialized, currentUser, logout } = useAuth();
@@ -31,7 +42,7 @@ export default function LeadsPage() {
     name: "",
     phone: "",
     address: "",
-    motivation: "",
+    motivation: LEAD_NOTES_TEMPLATE,
     nextFollowUpDate: "",
   });
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -105,7 +116,13 @@ export default function LeadsPage() {
       });
 
       if (res.ok) {
-        setForm({ name: "", phone: "", address: "", motivation: "", nextFollowUpDate: "" });
+        setForm({
+          name: "",
+          phone: "",
+          address: "",
+          motivation: LEAD_NOTES_TEMPLATE,
+          nextFollowUpDate: "",
+        });
         setTargetList("Leads");
         router.push(`/records#list-${targetList.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`);
       } else {
@@ -282,7 +299,7 @@ export default function LeadsPage() {
                   placeholder="Motivation / Notes"
                   value={form.motivation}
                   onChange={(e) => updateField("motivation", e.target.value)}
-                  rows={6}
+                  rows={12}
                 />
                 <button
                   type="submit"
