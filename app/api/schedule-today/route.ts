@@ -89,12 +89,13 @@ export async function GET(req: NextRequest) {
       .filter((value): value is number => value !== null);
     const linkedRecords = recordIds.length
       ? await prisma.record.findMany({
-          where: { id: { in: recordIds } },
-          select: {
-            id: true,
-            list: true,
-            priority: true,
-            followUpCount: true,
+        where: { id: { in: recordIds } },
+        select: {
+          id: true,
+          title: true,
+          list: true,
+          priority: true,
+          followUpCount: true,
             lastContactOutcome: true,
             lastFollowedUpAt: true,
             followUpAt: true,
@@ -110,12 +111,17 @@ export async function GET(req: NextRequest) {
 
       return {
         ...card,
+        sellerName: linkedRecord ? stripPhone(linkedRecord.title) || linkedRecord.title : card.sellerName,
+        phone: linkedRecord
+          ? extractPhone(`${linkedRecord.title} ${linkedRecord.body || ""}`) ?? card.phone
+          : card.phone,
+        address: linkedRecord ? findAddress(linkedRecord.body) ?? card.address : card.address,
         stage: linkedRecord?.list ?? null,
         lastContactDate:
           linkedRecord?.lastFollowedUpAt?.toISOString() ??
           linkedRecord?.createdAt?.toISOString() ??
           null,
-        nextFollowUpDate: linkedRecord?.followUpAt?.toISOString() ?? card.dueAt?.toISOString() ?? null,
+        nextFollowUpDate: linkedRecord?.followUpAt?.toISOString() ?? null,
         followUpCount: linkedRecord?.followUpCount ?? null,
         lastContactOutcome: linkedRecord?.lastContactOutcome ?? null,
         notesSummary: linkedRecord?.body ?? null,
@@ -175,6 +181,7 @@ export async function POST(req: NextRequest) {
           ? record.priority
           : "Medium";
     const dueAt = parseDate(data.dueAt);
+    const nextFollowUpAt = dueAt ?? record.followUpAt;
     const leadId = `record-${record.id}`;
     const sellerName = stripPhone(record.title) || record.title;
     const phone = extractPhone(`${record.title} ${record.body || ""}`);
@@ -193,7 +200,7 @@ export async function POST(req: NextRequest) {
         phone,
         address,
         priority,
-        dueAt,
+        dueAt: nextFollowUpAt,
         completed: false,
         status: "Queued",
         source: hasBearer ? "openclaw" : "manual",
@@ -215,7 +222,7 @@ export async function POST(req: NextRequest) {
         phone,
         address,
         priority,
-        dueAt,
+        dueAt: nextFollowUpAt,
         completed: false,
         status: "Queued",
         source: hasBearer ? "openclaw" : "manual",
@@ -235,7 +242,7 @@ export async function POST(req: NextRequest) {
       where: { id: record.id },
       data: {
         priority,
-        followUpAt: dueAt ?? record.followUpAt,
+        followUpAt: nextFollowUpAt,
       },
     });
 

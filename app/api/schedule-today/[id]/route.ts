@@ -120,9 +120,6 @@ export async function PATCH(
     }
 
     const dueAt = normalizeDueAt(data.dueAt);
-    if (dueAt !== undefined) {
-      updateData.dueAt = dueAt;
-    }
 
     const card = await prisma.scheduleTodayCard.update({
       where: { id: Number(id) },
@@ -138,6 +135,12 @@ export async function PATCH(
       if (existingRecord) {
         const nextLastContactDate = parseDateOnly(data.lastContactDate);
         const nextFollowUpDate = parseDateOnly(data.nextFollowUpDate);
+        const sharedFollowUpAt =
+          nextFollowUpDate !== undefined
+            ? nextFollowUpDate
+            : dueAt !== undefined
+              ? dueAt
+              : existingRecord.followUpAt;
         const nextPriority =
           typeof data.priority === "string" && allowedPriorities.has(data.priority)
             ? data.priority
@@ -155,6 +158,8 @@ export async function PATCH(
           `${existingRecord.lastFollowedUpAt?.toISOString() ?? ""}` !==
             `${nextLastContactDate?.toISOString() ?? ""}`;
 
+        updateData.dueAt = sharedFollowUpAt;
+
         await prisma.record.update({
           where: { id: recordId },
           data: {
@@ -167,21 +172,24 @@ export async function PATCH(
                 : existingRecord.lastContactOutcome,
             lastFollowedUpAt:
               nextLastContactDate !== undefined ? nextLastContactDate : existingRecord.lastFollowedUpAt,
-            followUpAt:
-              nextFollowUpDate !== undefined
-                ? nextFollowUpDate
-                : dueAt !== undefined
-                  ? dueAt
-                  : existingRecord.followUpAt,
+            followUpAt: sharedFollowUpAt,
             followUpCount: followUpTouched
               ? existingRecord.followUpCount + 1
               : existingRecord.followUpCount,
           },
         });
+      } else if (dueAt !== undefined) {
+        updateData.dueAt = dueAt;
       }
+    } else if (dueAt !== undefined) {
+      updateData.dueAt = dueAt;
     }
 
-    return Response.json(card);
+    const refreshedCard = await prisma.scheduleTodayCard.findUnique({
+      where: { id: Number(id) },
+    });
+
+    return Response.json(refreshedCard ?? card);
   } catch (error) {
     console.error("Failed to update schedule card", error);
     return Response.json({ error: "Failed to update schedule card" }, { status: 500 });

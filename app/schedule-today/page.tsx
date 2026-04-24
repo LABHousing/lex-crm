@@ -48,7 +48,6 @@ type EditForm = {
   reason: string;
   suggestedMessage: string;
   suggestedCallOpener: string;
-  dueAt: string;
   lastContactDate: string;
   nextFollowUpDate: string;
   lastContactOutcome: string;
@@ -60,7 +59,7 @@ type AddCardForm = {
   recordId: string;
   type: ScheduleCard["type"];
   priority: ScheduleCard["priority"];
-  dueAt: string;
+  nextFollowUpDate: string;
   reason: string;
   suggestedMessage: string;
   suggestedCallOpener: string;
@@ -99,14 +98,18 @@ function sortCards(cards: ScheduleCard[]) {
       return priorityDelta;
     }
 
-    const aDue = a.dueAt ? new Date(a.dueAt).getTime() : Number.MAX_SAFE_INTEGER;
-    const bDue = b.dueAt ? new Date(b.dueAt).getTime() : Number.MAX_SAFE_INTEGER;
+    const aDue = a.nextFollowUpDate
+      ? new Date(a.nextFollowUpDate).getTime()
+      : a.dueAt
+        ? new Date(a.dueAt).getTime()
+        : Number.MAX_SAFE_INTEGER;
+    const bDue = b.nextFollowUpDate
+      ? new Date(b.nextFollowUpDate).getTime()
+      : b.dueAt
+        ? new Date(b.dueAt).getTime()
+        : Number.MAX_SAFE_INTEGER;
     return aDue - bDue;
   });
-}
-
-function getGroup(cards: ScheduleCard[], types: ScheduleCard["type"][]) {
-  return sortCards(cards.filter((card) => !card.completed && types.includes(card.type)));
 }
 
 function toLocalDateTimeValue(value: string | null) {
@@ -137,7 +140,6 @@ function buildEditForm(card: ScheduleCard): EditForm {
     reason: card.reason || "",
     suggestedMessage: card.suggestedMessage || "",
     suggestedCallOpener: card.suggestedCallOpener || "",
-    dueAt: toLocalDateTimeValue(card.dueAt),
     lastContactDate: card.lastContactDate ? card.lastContactDate.slice(0, 10) : "",
     nextFollowUpDate: card.nextFollowUpDate ? card.nextFollowUpDate.slice(0, 10) : "",
     lastContactOutcome: card.lastContactOutcome || "",
@@ -172,7 +174,7 @@ export default function ScheduleTodayPage() {
     recordId: "",
     type: "follow_up",
     priority: "Medium",
-    dueAt: "",
+    nextFollowUpDate: "",
     reason: "",
     suggestedMessage: "",
     suggestedCallOpener: "",
@@ -265,7 +267,7 @@ export default function ScheduleTodayPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...editForm,
-          dueAt: editForm.dueAt || null,
+          dueAt: editForm.nextFollowUpDate || null,
         }),
       });
 
@@ -329,7 +331,7 @@ export default function ScheduleTodayPage() {
           recordId: Number(addCardForm.recordId),
           type: addCardForm.type,
           priority: addCardForm.priority,
-          dueAt: addCardForm.dueAt || null,
+          dueAt: addCardForm.nextFollowUpDate || null,
           reason: addCardForm.reason,
           suggestedMessage: addCardForm.suggestedMessage,
           suggestedCallOpener: addCardForm.suggestedCallOpener,
@@ -362,7 +364,7 @@ export default function ScheduleTodayPage() {
         recordId: "",
         type: "follow_up",
         priority: selectedRecord?.priority === "Urgent" ? "Urgent" : "Medium",
-        dueAt: "",
+        nextFollowUpDate: "",
         reason: "",
         suggestedMessage: "",
         suggestedCallOpener: "",
@@ -398,14 +400,6 @@ export default function ScheduleTodayPage() {
               {card.stage ? (
                 <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-700">
                   {card.stage}
-                </span>
-              ) : null}
-              {card.dueAt ? (
-                <span className="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-700">
-                  Due {new Date(card.dueAt).toLocaleTimeString([], {
-                    hour: "numeric",
-                    minute: "2-digit",
-                  })}
                 </span>
               ) : null}
             </div>
@@ -462,12 +456,6 @@ export default function ScheduleTodayPage() {
                 ? new Date(card.nextFollowUpDate).toLocaleDateString()
                 : "Not set"}
             </div>
-          </div>
-          <div className="rounded-xl bg-stone-50 p-4">
-            <div className="text-[11px] uppercase tracking-[0.2em] text-stone-500">
-              Follow-Up Count
-            </div>
-            <div className="mt-1 font-medium text-slate-800">{card.followUpCount ?? 0}</div>
           </div>
           <div className="rounded-xl bg-stone-50 p-4 md:col-span-2 xl:col-span-3">
             <div className="text-[11px] uppercase tracking-[0.2em] text-stone-500">
@@ -589,11 +577,11 @@ export default function ScheduleTodayPage() {
                 <option value="Urgent">Urgent</option>
               </select>
               <input
-                type="datetime-local"
-                value={editForm.dueAt}
+                type="date"
+                value={editForm.nextFollowUpDate}
                 onChange={(event) =>
                   setEditForm((prev) =>
-                    prev ? { ...prev, dueAt: event.target.value } : prev
+                    prev ? { ...prev, nextFollowUpDate: event.target.value } : prev
                   )
                 }
                 className="rounded-lg border px-3 py-2 text-sm"
@@ -604,16 +592,6 @@ export default function ScheduleTodayPage() {
                 onChange={(event) =>
                   setEditForm((prev) =>
                     prev ? { ...prev, lastContactDate: event.target.value } : prev
-                  )
-                }
-                className="rounded-lg border px-3 py-2 text-sm"
-              />
-              <input
-                type="date"
-                value={editForm.nextFollowUpDate}
-                onChange={(event) =>
-                  setEditForm((prev) =>
-                    prev ? { ...prev, nextFollowUpDate: event.target.value } : prev
                   )
                 }
                 className="rounded-lg border px-3 py-2 text-sm"
@@ -710,11 +688,13 @@ export default function ScheduleTodayPage() {
     return <div className="p-6">Loading...</div>;
   }
 
-  const topPriorityCalls = getGroup(cards, ["call"]);
-  const textsToSend = getGroup(cards, ["text"]);
-  const followUps = getGroup(cards, ["follow_up"]);
-  const offersReviews = getGroup(cards, ["offer", "review"]);
-  const openCount = cards.filter((card) => !card.completed).length;
+  const activeCards = sortCards(cards.filter((card) => !card.completed));
+  const appointmentCards = activeCards.filter((card) => card.stage === "Appointment");
+  const opportunityCards = activeCards.filter((card) => card.stage === "Opportunity");
+  const laterCards = activeCards.filter(
+    (card) => card.stage !== "Appointment" && card.stage !== "Opportunity"
+  );
+  const openCount = activeCards.length;
   const doneToday = sortCards(cards.filter((card) => card.completed));
   const filteredRecords = records
     .filter((record) => record.list !== "Buyer/Agent")
@@ -893,10 +873,13 @@ export default function ScheduleTodayPage() {
                   <option value="Urgent">Urgent</option>
                 </select>
                 <input
-                  type="datetime-local"
-                  value={addCardForm.dueAt}
+                  type="date"
+                  value={addCardForm.nextFollowUpDate}
                   onChange={(event) =>
-                    setAddCardForm((prev) => ({ ...prev, dueAt: event.target.value }))
+                    setAddCardForm((prev) => ({
+                      ...prev,
+                      nextFollowUpDate: event.target.value,
+                    }))
                   }
                   className="rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm md:col-span-2"
                 />
@@ -942,46 +925,23 @@ export default function ScheduleTodayPage() {
           </section>
         ) : null}
 
-        <div className="grid gap-6 xl:grid-cols-2">
+        <div className="space-y-8">
           <section>
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-2xl font-black">Top Priority Calls</h2>
-              <span className="text-sm text-gray-600">{topPriorityCalls.length} cards</span>
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.3em] text-red-600">
+                  Top Priority
+                </div>
+                <h2 className="text-2xl font-black">Appointments First</h2>
+              </div>
+              <span className="text-sm text-gray-600">{appointmentCards.length} cards</span>
             </div>
             <div className="grid gap-4">
-              {topPriorityCalls.length ? (
-                topPriorityCalls.map(renderCard)
-              ) : (
-                <p className="rounded-xl border bg-white p-5 text-gray-500">No calls queued.</p>
-              )}
-            </div>
-          </section>
-
-          <section>
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-2xl font-black">Texts To Send</h2>
-              <span className="text-sm text-gray-600">{textsToSend.length} cards</span>
-            </div>
-            <div className="grid gap-4">
-              {textsToSend.length ? (
-                textsToSend.map(renderCard)
-              ) : (
-                <p className="rounded-xl border bg-white p-5 text-gray-500">No texts queued.</p>
-              )}
-            </div>
-          </section>
-
-          <section>
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-2xl font-black">Follow-Ups</h2>
-              <span className="text-sm text-gray-600">{followUps.length} cards</span>
-            </div>
-            <div className="grid gap-4">
-              {followUps.length ? (
-                followUps.map(renderCard)
+              {appointmentCards.length ? (
+                appointmentCards.map(renderCard)
               ) : (
                 <p className="rounded-xl border bg-white p-5 text-gray-500">
-                  No follow-ups queued.
+                  No appointments queued.
                 </p>
               )}
             </div>
@@ -989,15 +949,41 @@ export default function ScheduleTodayPage() {
 
           <section>
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-2xl font-black">Offers / Reviews</h2>
-              <span className="text-sm text-gray-600">{offersReviews.length} cards</span>
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.3em] text-amber-600">
+                  Next Up
+                </div>
+                <h2 className="text-2xl font-black">Opportunities</h2>
+              </div>
+              <span className="text-sm text-gray-600">{opportunityCards.length} cards</span>
             </div>
             <div className="grid gap-4">
-              {offersReviews.length ? (
-                offersReviews.map(renderCard)
+              {opportunityCards.length ? (
+                opportunityCards.map(renderCard)
               ) : (
                 <p className="rounded-xl border bg-white p-5 text-gray-500">
-                  No offers or reviews queued.
+                  No opportunities queued.
+                </p>
+              )}
+            </div>
+          </section>
+
+          <section>
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
+                  Later
+                </div>
+                <h2 className="text-2xl font-black">Leads and Everything Else</h2>
+              </div>
+              <span className="text-sm text-gray-600">{laterCards.length} cards</span>
+            </div>
+            <div className="grid gap-4">
+              {laterCards.length ? (
+                laterCards.map(renderCard)
+              ) : (
+                <p className="rounded-xl border bg-white p-5 text-gray-500">
+                  Nothing waiting in the later queue.
                 </p>
               )}
             </div>

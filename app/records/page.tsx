@@ -576,18 +576,6 @@ export default function RecordsPage() {
                       </option>
                     ))}
                   </select>
-                  <input
-                    type="number"
-                    min="0"
-                    className="rounded-2xl border border-stone-200 bg-white p-3"
-                    placeholder="Follow-Up Count"
-                    value={editForm.followUpCount}
-                    onChange={(e) =>
-                      setEditForm((prev) =>
-                        prev ? { ...prev, followUpCount: e.target.value } : prev
-                      )
-                    }
-                  />
                 </>
               ) : null}
             </div>
@@ -708,14 +696,6 @@ export default function RecordsPage() {
                     }`}
                   >
                     {formatMoney(item.leadCost || 0)}
-                  </div>
-                </div>
-                <div className="rounded-2xl bg-stone-50 px-4 py-3">
-                  <div className="text-[11px] uppercase tracking-[0.2em] text-stone-500">
-                    Follow-Up Count
-                  </div>
-                  <div className="mt-1 text-sm font-medium text-slate-900">
-                    {item.followUpCount || 0}
                   </div>
                 </div>
                 <div className="rounded-2xl bg-stone-50 px-4 py-3 md:col-span-2 xl:col-span-3">
