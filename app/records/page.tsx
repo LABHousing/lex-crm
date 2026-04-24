@@ -110,6 +110,24 @@ function formatMoney(value: number) {
   }).format(value);
 }
 
+function toLocalDateTimeValue(value: string | null) {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
 function getWeekStart(date: Date) {
   const next = new Date(date);
   next.setHours(0, 0, 0, 0);
@@ -306,8 +324,8 @@ export default function RecordsPage() {
       leadCost: String(record.leadCost ?? 0),
       followUpCount: String(record.followUpCount ?? 0),
       lastContactOutcome: record.lastContactOutcome || "",
-      lastFollowedUpAt: record.lastFollowedUpAt ? record.lastFollowedUpAt.slice(0, 10) : "",
-      followUpAt: record.followUpAt ? record.followUpAt.slice(0, 10) : "",
+      lastFollowedUpAt: toLocalDateTimeValue(record.lastFollowedUpAt),
+      followUpAt: toLocalDateTimeValue(record.followUpAt),
       completed: record.completed,
     });
   }
@@ -505,7 +523,7 @@ export default function RecordsPage() {
                   Last Contact Date
                 </div>
                 <input
-                  type="date"
+                  type="datetime-local"
                   className="w-full bg-transparent outline-none"
                   value={editForm.lastFollowedUpAt}
                   onChange={(e) =>
@@ -520,7 +538,7 @@ export default function RecordsPage() {
                   Next Follow-Up Date
                 </div>
                 <input
-                  type="date"
+                  type="datetime-local"
                   className="w-full bg-transparent outline-none"
                   value={editForm.followUpAt}
                   onChange={(e) =>
@@ -716,7 +734,7 @@ export default function RecordsPage() {
                 </div>
                 <div className="mt-1 font-medium text-slate-800">
                   {item.lastFollowedUpAt
-                    ? new Date(item.lastFollowedUpAt).toLocaleDateString()
+                    ? new Date(item.lastFollowedUpAt).toLocaleString()
                     : "Not set"}
                 </div>
               </div>
@@ -725,7 +743,7 @@ export default function RecordsPage() {
                   Next Follow-Up Date
                 </div>
                 <div className="mt-1 font-medium text-slate-800">
-                  {item.followUpAt ? new Date(item.followUpAt).toLocaleDateString() : "Not set"}
+                  {item.followUpAt ? new Date(item.followUpAt).toLocaleString() : "Not set"}
                 </div>
               </div>
             </div>

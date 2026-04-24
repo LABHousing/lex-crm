@@ -45,6 +45,106 @@ function validateFollowUpRule(data: {
   return null;
 }
 
+function buildRecordLeadId(id: number) {
+  return `record-${id}`;
+}
+
+function extractPhone(value: string | null | undefined) {
+  if (!value) return null;
+  const match = value.match(/(?:\+?1[\s.-]*)?(?:\(?\d{3}\)?[\s.-]*)\d{3}[\s.-]*\d{4}/);
+  return match ? match[0].trim() : null;
+}
+
+function stripPhone(value: string | null | undefined) {
+  if (!value) return null;
+  return value
+    .replace(/(?:\+?1[\s.-]*)?(?:\(?\d{3}\)?[\s.-]*)\d{3}[\s.-]*\d{4}/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+function findAddress(body: string | null | undefined) {
+  if (!body) return null;
+  const lines = body
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  return lines[0] || null;
+}
+
+function getTodayDateKey(value = new Date()) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Chicago",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(value));
+}
+
+async function syncRecordToSchedule(record: {
+  id: number;
+  list: string;
+  title: string;
+  body: string | null;
+  priority: string;
+  followUpAt: Date | null;
+}) {
+  const leadId = buildRecordLeadId(record.id);
+  const dateKey = getTodayDateKey();
+
+  if (!requiresFollowUp(record.list)) {
+    await prisma.scheduleTodayCard.updateMany({
+      where: {
+        dateKey,
+        leadId,
+        type: "follow_up",
+      },
+      data: {
+        completed: true,
+        status: "Finished",
+        dueAt: record.followUpAt,
+        priority: normalizePriority(record.priority),
+      },
+    });
+    return;
+  }
+
+  await prisma.scheduleTodayCard.upsert({
+    where: {
+      dateKey_leadId_type: {
+        dateKey,
+        leadId,
+        type: "follow_up",
+      },
+    },
+    update: {
+      sellerName: stripPhone(record.title) || record.title,
+      phone: extractPhone(`${record.title} ${record.body || ""}`),
+      address: findAddress(record.body),
+      priority: normalizePriority(record.priority),
+      dueAt: record.followUpAt,
+      completed: false,
+      status: "Queued",
+    },
+    create: {
+      dateKey,
+      leadId,
+      type: "follow_up",
+      sellerName: stripPhone(record.title) || record.title,
+      phone: extractPhone(`${record.title} ${record.body || ""}`),
+      address: findAddress(record.body),
+      status: "Queued",
+      priority: normalizePriority(record.priority),
+      reason: null,
+      suggestedMessage: null,
+      suggestedCallOpener: null,
+      dueAt: record.followUpAt,
+      completed: false,
+      source: "manual",
+    },
+  });
+}
+
 export async function GET() {
   try {
     const currentUser = await getAuthenticatedUser();
@@ -113,6 +213,8 @@ export async function POST(req: Request) {
         completed,
       },
     });
+
+    await syncRecordToSchedule(record);
 
     return Response.json(record);
   } catch (error) {
@@ -204,6 +306,8 @@ export async function PATCH(req: Request) {
         completed,
       },
     });
+
+    await syncRecordToSchedule(record);
 
     return Response.json(record);
   } catch (error) {

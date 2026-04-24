@@ -5,6 +5,38 @@ import { isOpenClawAuthorized } from "@/app/api/schedule-today/route";
 
 export const dynamic = "force-dynamic";
 
+function parseRecordId(leadId: string) {
+  if (!leadId.startsWith("record-")) {
+    return null;
+  }
+
+  const parsed = Number(leadId.replace("record-", ""));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function extractPhone(value: string | null | undefined) {
+  if (!value) return null;
+  const match = value.match(/(?:\+?1[\s.-]*)?(?:\(?\d{3}\)?[\s.-]*)\d{3}[\s.-]*\d{4}/);
+  return match ? match[0].trim() : null;
+}
+
+function stripPhone(value: string | null | undefined) {
+  if (!value) return null;
+  return value
+    .replace(/(?:\+?1[\s.-]*)?(?:\(?\d{3}\)?[\s.-]*)\d{3}[\s.-]*\d{4}/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+function findAddress(body: string | null | undefined) {
+  if (!body) return null;
+  const lines = body
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  return lines[0] || null;
+}
+
 export async function PATCH(
   req: NextRequest,
   ctx: RouteContext<"/api/schedule-today/[id]/complete">
@@ -59,7 +91,29 @@ export async function PATCH(
       }
     }
 
-    return Response.json(card);
+    const recordId = parseRecordId(existingCard.leadId);
+    const refreshedRecord =
+      recordId !== null
+        ? await prisma.record.findUnique({
+            where: { id: recordId },
+          })
+        : null;
+
+    return Response.json({
+      ...card,
+      sellerName: refreshedRecord ? stripPhone(refreshedRecord.title) || refreshedRecord.title : card.sellerName,
+      phone: refreshedRecord
+        ? extractPhone(`${refreshedRecord.title} ${refreshedRecord.body || ""}`) ?? card.phone
+        : card.phone,
+      address: refreshedRecord ? findAddress(refreshedRecord.body) ?? card.address : card.address,
+      stage: refreshedRecord?.list ?? null,
+      lastContactDate: refreshedRecord?.lastFollowedUpAt?.toISOString() ?? null,
+      nextFollowUpDate:
+        refreshedRecord?.followUpAt?.toISOString() ?? card.dueAt?.toISOString() ?? null,
+      lastContactOutcome: refreshedRecord?.lastContactOutcome ?? null,
+      notesSummary: refreshedRecord?.body ?? null,
+      recordPriority: refreshedRecord?.priority ?? card.priority,
+    });
   } catch (error) {
     console.error("Failed to update schedule card completion", error);
     return Response.json(

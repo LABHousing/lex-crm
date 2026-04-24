@@ -48,6 +48,29 @@ function buildRecordTitle(sellerName: string | null, phone: string | null, fallb
   return nextTitle || fallback;
 }
 
+function extractPhone(value: string | null | undefined) {
+  if (!value) return null;
+  const match = value.match(/(?:\+?1[\s.-]*)?(?:\(?\d{3}\)?[\s.-]*)\d{3}[\s.-]*\d{4}/);
+  return match ? match[0].trim() : null;
+}
+
+function stripPhone(value: string | null | undefined) {
+  if (!value) return null;
+  return value
+    .replace(/(?:\+?1[\s.-]*)?(?:\(?\d{3}\)?[\s.-]*)\d{3}[\s.-]*\d{4}/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+function findAddress(body: string | null | undefined) {
+  if (!body) return null;
+  const lines = body
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  return lines[0] || null;
+}
+
 export async function PATCH(
   req: NextRequest,
   ctx: RouteContext<"/api/schedule-today/[id]">
@@ -121,11 +144,6 @@ export async function PATCH(
 
     const dueAt = normalizeDueAt(data.dueAt);
 
-    const card = await prisma.scheduleTodayCard.update({
-      where: { id: Number(id) },
-      data: updateData,
-    });
-
     const recordId = parseRecordId(existingCard.leadId);
     if (recordId !== null) {
       const existingRecord = await prisma.record.findUnique({
@@ -185,11 +203,48 @@ export async function PATCH(
       updateData.dueAt = dueAt;
     }
 
+    const card = await prisma.scheduleTodayCard.update({
+      where: { id: Number(id) },
+      data: updateData,
+    });
+
     const refreshedCard = await prisma.scheduleTodayCard.findUnique({
       where: { id: Number(id) },
     });
+    const refreshedRecord =
+      recordId !== null
+        ? await prisma.record.findUnique({
+            where: { id: recordId },
+          })
+        : null;
 
-    return Response.json(refreshedCard ?? card);
+    return Response.json(
+      refreshedCard
+        ? {
+            ...refreshedCard,
+            sellerName: refreshedRecord
+              ? stripPhone(refreshedRecord.title) || refreshedRecord.title
+              : refreshedCard.sellerName,
+            phone: refreshedRecord
+              ? extractPhone(`${refreshedRecord.title} ${refreshedRecord.body || ""}`) ??
+                refreshedCard.phone
+              : refreshedCard.phone,
+            address: refreshedRecord
+              ? findAddress(refreshedRecord.body) ?? refreshedCard.address
+              : refreshedCard.address,
+            stage: refreshedRecord?.list ?? null,
+            lastContactDate:
+              refreshedRecord?.lastFollowedUpAt?.toISOString() ?? null,
+            nextFollowUpDate:
+              refreshedRecord?.followUpAt?.toISOString() ??
+              refreshedCard.dueAt?.toISOString() ??
+              null,
+            lastContactOutcome: refreshedRecord?.lastContactOutcome ?? null,
+            notesSummary: refreshedRecord?.body ?? null,
+            recordPriority: refreshedRecord?.priority ?? refreshedCard.priority,
+          }
+        : card
+    );
   } catch (error) {
     console.error("Failed to update schedule card", error);
     return Response.json({ error: "Failed to update schedule card" }, { status: 500 });

@@ -130,6 +130,26 @@ function toLocalDateTimeValue(value: string | null) {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
+function getCardScheduleAt(card: ScheduleCard) {
+  const value = card.nextFollowUpDate || card.dueAt;
+  if (!value) {
+    return null;
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function getEndOfToday() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+}
+
+function getEndOfTomorrow() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 23, 59, 59, 999);
+}
+
 function buildEditForm(card: ScheduleCard): EditForm {
   return {
     sellerName: card.sellerName || "",
@@ -140,8 +160,8 @@ function buildEditForm(card: ScheduleCard): EditForm {
     reason: card.reason || "",
     suggestedMessage: card.suggestedMessage || "",
     suggestedCallOpener: card.suggestedCallOpener || "",
-    lastContactDate: card.lastContactDate ? card.lastContactDate.slice(0, 10) : "",
-    nextFollowUpDate: card.nextFollowUpDate ? card.nextFollowUpDate.slice(0, 10) : "",
+    lastContactDate: toLocalDateTimeValue(card.lastContactDate ?? null),
+    nextFollowUpDate: toLocalDateTimeValue(card.nextFollowUpDate ?? card.dueAt ?? null),
     lastContactOutcome: card.lastContactOutcome || "",
     notesSummary: card.notesSummary || "",
     completed: card.completed,
@@ -443,7 +463,7 @@ export default function ScheduleTodayPage() {
             </div>
             <div className="mt-1 font-medium text-slate-800">
               {card.lastContactDate
-                ? new Date(card.lastContactDate).toLocaleDateString()
+                ? new Date(card.lastContactDate).toLocaleString()
                 : "Not set"}
             </div>
           </div>
@@ -452,8 +472,8 @@ export default function ScheduleTodayPage() {
               Next Follow-Up
             </div>
             <div className="mt-1 font-medium text-slate-800">
-              {card.nextFollowUpDate
-                ? new Date(card.nextFollowUpDate).toLocaleDateString()
+              {card.nextFollowUpDate || card.dueAt
+                ? new Date(card.nextFollowUpDate || card.dueAt || "").toLocaleString()
                 : "Not set"}
             </div>
           </div>
@@ -577,7 +597,7 @@ export default function ScheduleTodayPage() {
                 <option value="Urgent">Urgent</option>
               </select>
               <input
-                type="date"
+                type="datetime-local"
                 value={editForm.nextFollowUpDate}
                 onChange={(event) =>
                   setEditForm((prev) =>
@@ -587,7 +607,7 @@ export default function ScheduleTodayPage() {
                 className="rounded-lg border px-3 py-2 text-sm"
               />
               <input
-                type="date"
+                type="datetime-local"
                 value={editForm.lastContactDate}
                 onChange={(event) =>
                   setEditForm((prev) =>
@@ -689,11 +709,20 @@ export default function ScheduleTodayPage() {
   }
 
   const activeCards = sortCards(cards.filter((card) => !card.completed));
-  const appointmentCards = activeCards.filter((card) => card.stage === "Appointment");
-  const opportunityCards = activeCards.filter((card) => card.stage === "Opportunity");
-  const laterCards = activeCards.filter(
-    (card) => card.stage !== "Appointment" && card.stage !== "Opportunity"
-  );
+  const endOfToday = getEndOfToday();
+  const endOfTomorrow = getEndOfTomorrow();
+  const topPriorityCards = activeCards.filter((card) => {
+    const scheduleAt = getCardScheduleAt(card);
+    return scheduleAt ? scheduleAt <= endOfToday : false;
+  });
+  const nextUpCards = activeCards.filter((card) => {
+    const scheduleAt = getCardScheduleAt(card);
+    return scheduleAt ? scheduleAt > endOfToday && scheduleAt <= endOfTomorrow : false;
+  });
+  const laterCards = activeCards.filter((card) => {
+    const scheduleAt = getCardScheduleAt(card);
+    return !scheduleAt || scheduleAt > endOfTomorrow;
+  });
   const openCount = activeCards.length;
   const doneToday = sortCards(cards.filter((card) => card.completed));
   const filteredRecords = records
@@ -873,7 +902,7 @@ export default function ScheduleTodayPage() {
                   <option value="Urgent">Urgent</option>
                 </select>
                 <input
-                  type="date"
+                  type="datetime-local"
                   value={addCardForm.nextFollowUpDate}
                   onChange={(event) =>
                     setAddCardForm((prev) => ({
@@ -932,16 +961,16 @@ export default function ScheduleTodayPage() {
                 <div className="text-xs font-semibold uppercase tracking-[0.3em] text-red-600">
                   Top Priority
                 </div>
-                <h2 className="text-2xl font-black">Appointments First</h2>
+                <h2 className="text-2xl font-black">Due Today & Overdue</h2>
               </div>
-              <span className="text-sm text-gray-600">{appointmentCards.length} cards</span>
+              <span className="text-sm text-gray-600">{topPriorityCards.length} cards</span>
             </div>
             <div className="grid gap-4">
-              {appointmentCards.length ? (
-                appointmentCards.map(renderCard)
+              {topPriorityCards.length ? (
+                topPriorityCards.map(renderCard)
               ) : (
                 <p className="rounded-xl border bg-white p-5 text-gray-500">
-                  No appointments queued.
+                  Nothing due today or overdue.
                 </p>
               )}
             </div>
@@ -953,16 +982,16 @@ export default function ScheduleTodayPage() {
                 <div className="text-xs font-semibold uppercase tracking-[0.3em] text-amber-600">
                   Next Up
                 </div>
-                <h2 className="text-2xl font-black">Opportunities</h2>
+                <h2 className="text-2xl font-black">Coming Up Soon</h2>
               </div>
-              <span className="text-sm text-gray-600">{opportunityCards.length} cards</span>
+              <span className="text-sm text-gray-600">{nextUpCards.length} cards</span>
             </div>
             <div className="grid gap-4">
-              {opportunityCards.length ? (
-                opportunityCards.map(renderCard)
+              {nextUpCards.length ? (
+                nextUpCards.map(renderCard)
               ) : (
                 <p className="rounded-xl border bg-white p-5 text-gray-500">
-                  No opportunities queued.
+                  Nothing coming up soon.
                 </p>
               )}
             </div>
@@ -974,7 +1003,7 @@ export default function ScheduleTodayPage() {
                 <div className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
                   Later
                 </div>
-                <h2 className="text-2xl font-black">Leads and Everything Else</h2>
+                <h2 className="text-2xl font-black">Future Follow-Ups</h2>
               </div>
               <span className="text-sm text-gray-600">{laterCards.length} cards</span>
             </div>

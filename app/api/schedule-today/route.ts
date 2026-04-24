@@ -5,6 +5,7 @@ import { canAccessPage, getAuthenticatedUser, isAdmin } from "@/app/lib/auth";
 export const dynamic = "force-dynamic";
 
 const SCHEDULE_TIME_ZONE = "America/Chicago";
+const ACTIVE_SELLER_LISTS = ["Leads", "Opportunity", "Appointment"] as const;
 
 export function getDateKey(value = new Date()) {
   return new Intl.DateTimeFormat("en-CA", {
@@ -63,6 +64,10 @@ function parseDate(value: unknown) {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
+function requiresFollowUp(list: string) {
+  return ACTIVE_SELLER_LISTS.includes(list as (typeof ACTIVE_SELLER_LISTS)[number]);
+}
+
 const CARD_TYPES = new Set(["call", "text", "follow_up", "offer", "review"]);
 const PRIORITIES = new Set(["Low", "Medium", "High", "Urgent"]);
 
@@ -80,6 +85,64 @@ export async function GET(req: NextRequest) {
     }
 
     const dateKey = req.nextUrl.searchParams.get("dateKey") || getDateKey();
+    const activeRecords = await prisma.record.findMany({
+      where:
+        currentUser?.recordsScope === "contract-only"
+          ? { list: "Contract" }
+          : {
+              list: {
+                in: [...ACTIVE_SELLER_LISTS],
+              },
+            },
+      select: {
+        id: true,
+        title: true,
+        body: true,
+        list: true,
+        priority: true,
+        followUpAt: true,
+      },
+    });
+
+    await Promise.all(
+      activeRecords.map((record) =>
+        prisma.scheduleTodayCard.upsert({
+          where: {
+            dateKey_leadId_type: {
+              dateKey,
+              leadId: `record-${record.id}`,
+              type: "follow_up",
+            },
+          },
+          update: {
+            sellerName: stripPhone(record.title) || record.title,
+            phone: extractPhone(`${record.title} ${record.body || ""}`),
+            address: findAddress(record.body),
+            priority: PRIORITIES.has(record.priority) ? record.priority : "Medium",
+            dueAt: record.followUpAt,
+            completed: false,
+            status: "Queued",
+          },
+          create: {
+            dateKey,
+            leadId: `record-${record.id}`,
+            type: "follow_up",
+            sellerName: stripPhone(record.title) || record.title,
+            phone: extractPhone(`${record.title} ${record.body || ""}`),
+            address: findAddress(record.body),
+            status: "Queued",
+            priority: PRIORITIES.has(record.priority) ? record.priority : "Medium",
+            reason: null,
+            suggestedMessage: null,
+            suggestedCallOpener: null,
+            dueAt: record.followUpAt,
+            completed: false,
+            source: "manual",
+          },
+        })
+      )
+    );
+
     const cards = await prisma.scheduleTodayCard.findMany({
       where: { dateKey },
       orderBy: [{ completed: "asc" }, { dueAt: "asc" }, { priority: "desc" }],
@@ -121,7 +184,7 @@ export async function GET(req: NextRequest) {
           linkedRecord?.lastFollowedUpAt?.toISOString() ??
           linkedRecord?.createdAt?.toISOString() ??
           null,
-        nextFollowUpDate: linkedRecord?.followUpAt?.toISOString() ?? null,
+        nextFollowUpDate: linkedRecord?.followUpAt?.toISOString() ?? card.dueAt?.toISOString() ?? null,
         followUpCount: linkedRecord?.followUpCount ?? null,
         lastContactOutcome: linkedRecord?.lastContactOutcome ?? null,
         notesSummary: linkedRecord?.body ?? null,
