@@ -90,7 +90,7 @@ export default function Home() {
           <div className="max-w-3xl">
             <BrandLogo className="mb-6 items-start" />
             <p className="mb-4 text-sm font-medium uppercase tracking-[0.35em] text-neutral-500">
-              A prestige way to sell your home.
+              Direct home buyer
             </p>
             <h1 className="max-w-4xl text-5xl font-semibold leading-[0.95] tracking-[-0.04em] text-neutral-950 md:text-7xl">
               A clean way to sell your house without the usual mess.
