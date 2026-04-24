@@ -285,7 +285,7 @@ export default function RecordsPage() {
   useEffect(() => {
     async function fetchRecords() {
       try {
-        const res = await fetch("/api/records");
+        const res = await fetch("/api/records", { cache: "no-store" });
         if (res.ok) {
           const data = await res.json();
           setRecords(data);

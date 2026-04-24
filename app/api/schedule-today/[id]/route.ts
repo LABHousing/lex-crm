@@ -44,7 +44,14 @@ function parseRecordId(leadId: string) {
 }
 
 function buildRecordTitle(sellerName: string | null, phone: string | null, fallback: string) {
-  const nextTitle = [sellerName, phone].filter(Boolean).join(" ").trim();
+  const normalizedSeller = sellerName?.trim() || null;
+  const normalizedPhone = phone?.trim() || null;
+
+  const nextTitle =
+    normalizedSeller && normalizedPhone && normalizedSeller.includes(normalizedPhone)
+      ? normalizedSeller
+      : [normalizedSeller, normalizedPhone].filter(Boolean).join(" ").trim();
+
   return nextTitle || fallback;
 }
 

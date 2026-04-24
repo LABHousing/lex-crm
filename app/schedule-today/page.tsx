@@ -212,8 +212,10 @@ export default function ScheduleTodayPage() {
     async function fetchCards() {
       try {
         const [scheduleRes, recordsRes] = await Promise.all([
-          fetch("/api/schedule-today"),
-          currentUser?.role === "admin" ? fetch("/api/records") : Promise.resolve(null),
+          fetch("/api/schedule-today", { cache: "no-store" }),
+          currentUser?.role === "admin"
+            ? fetch("/api/records", { cache: "no-store" })
+            : Promise.resolve(null),
         ]);
 
         if (scheduleRes.ok) {
@@ -364,7 +366,7 @@ export default function ScheduleTodayPage() {
       }
 
       const data = await res.json();
-      const scheduleRes = await fetch("/api/schedule-today");
+      const scheduleRes = await fetch("/api/schedule-today", { cache: "no-store" });
       if (scheduleRes.ok) {
         const scheduleData = await scheduleRes.json();
         setCards(scheduleData.cards || []);
