@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/app/lib/prisma";
 import { canAccessPage, getAuthenticatedUser, isAdmin } from "@/app/lib/auth";
+import { parseFixedCstDateTime } from "@/app/lib/fixed-cst";
 
 export const dynamic = "force-dynamic";
 
@@ -56,12 +57,7 @@ function findAddress(body: string | null | undefined) {
 }
 
 function parseDate(value: unknown) {
-  if (typeof value !== "string" || !value.trim()) {
-    return null;
-  }
-
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
+  return parseFixedCstDateTime(value) ?? null;
 }
 
 function requiresFollowUp(list: string) {

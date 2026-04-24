@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/lib/auth-context";
+import { formatFixedCstDateTime, toFixedCstDateTimeInput } from "@/app/lib/fixed-cst";
 
 type RecordItem = {
   id: number;
@@ -108,45 +109,6 @@ function formatMoney(value: number) {
     currency: "USD",
     maximumFractionDigits: 0,
   }).format(value);
-}
-
-function toLocalDateTimeValue(value: string | null) {
-  if (!value) {
-    return "";
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "";
-  }
-
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-}
-
-function formatCentralDateTime(value: string | null) {
-  if (!value) {
-    return "Not set";
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "Not set";
-  }
-
-  return new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Chicago",
-    year: "numeric",
-    month: "numeric",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    timeZoneName: "short",
-  }).format(date);
 }
 
 function getWeekStart(date: Date) {
@@ -345,8 +307,8 @@ export default function RecordsPage() {
       leadCost: String(record.leadCost ?? 0),
       followUpCount: String(record.followUpCount ?? 0),
       lastContactOutcome: record.lastContactOutcome || "",
-      lastFollowedUpAt: toLocalDateTimeValue(record.lastFollowedUpAt),
-      followUpAt: toLocalDateTimeValue(record.followUpAt),
+      lastFollowedUpAt: toFixedCstDateTimeInput(record.lastFollowedUpAt),
+      followUpAt: toFixedCstDateTimeInput(record.followUpAt),
       completed: record.completed,
     });
   }
@@ -715,7 +677,7 @@ export default function RecordsPage() {
                   Next Follow-Up Date
                 </div>
                 <div className="mt-1 font-medium text-slate-800">
-                  {formatCentralDateTime(item.followUpAt)}
+                  {formatFixedCstDateTime(item.followUpAt)}
                 </div>
               </div>
             </div>

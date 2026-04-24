@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/app/lib/prisma";
 import { getAuthenticatedUser, isAdmin } from "@/app/lib/auth";
 import { isOpenClawAuthorized } from "@/app/api/schedule-today/route";
+import { parseFixedCstDateTime } from "@/app/lib/fixed-cst";
 
 export const dynamic = "force-dynamic";
 
@@ -9,29 +10,11 @@ const allowedTypes = new Set(["call", "text", "follow_up", "offer", "review"]);
 const allowedPriorities = new Set(["Low", "Medium", "High", "Urgent"]);
 
 function normalizeDueAt(value: unknown) {
-  if (value === null || value === "") {
-    return null;
-  }
-
-  if (typeof value !== "string") {
-    return undefined;
-  }
-
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+  return parseFixedCstDateTime(value);
 }
 
 function parseDateOnly(value: unknown) {
-  if (value === null || value === "") {
-    return null;
-  }
-
-  if (typeof value !== "string") {
-    return undefined;
-  }
-
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+  return parseFixedCstDateTime(value);
 }
 
 function parseRecordId(leadId: string) {

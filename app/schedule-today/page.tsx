@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/lib/auth-context";
+import { formatFixedCstDateTime, toFixedCstDateTimeInput } from "@/app/lib/fixed-cst";
 
 type ScheduleCard = {
   id: number;
@@ -112,45 +113,6 @@ function sortCards(cards: ScheduleCard[]) {
   });
 }
 
-function toLocalDateTimeValue(value: string | null) {
-  if (!value) {
-    return "";
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "";
-  }
-
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-}
-
-function formatCentralDateTime(value: string | null) {
-  if (!value) {
-    return "Not set";
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "Not set";
-  }
-
-  return new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Chicago",
-    year: "numeric",
-    month: "numeric",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    timeZoneName: "short",
-  }).format(date);
-}
-
 function getCardScheduleAt(card: ScheduleCard) {
   const value = card.nextFollowUpDate || card.dueAt;
   if (!value) {
@@ -181,8 +143,8 @@ function buildEditForm(card: ScheduleCard): EditForm {
     reason: card.reason || "",
     suggestedMessage: card.suggestedMessage || "",
     suggestedCallOpener: card.suggestedCallOpener || "",
-    lastContactDate: toLocalDateTimeValue(card.lastContactDate ?? null),
-    nextFollowUpDate: toLocalDateTimeValue(card.nextFollowUpDate ?? card.dueAt ?? null),
+    lastContactDate: toFixedCstDateTimeInput(card.lastContactDate ?? null),
+    nextFollowUpDate: toFixedCstDateTimeInput(card.nextFollowUpDate ?? card.dueAt ?? null),
     lastContactOutcome: card.lastContactOutcome || "",
     notesSummary: card.notesSummary || "",
     completed: card.completed,
@@ -485,7 +447,7 @@ export default function ScheduleTodayPage() {
               Next Follow-Up
             </div>
             <div className="mt-1 font-medium text-slate-800">
-              {formatCentralDateTime(card.nextFollowUpDate || card.dueAt || null)}
+              {formatFixedCstDateTime(card.nextFollowUpDate || card.dueAt || null)}
             </div>
           </div>
           <div className="rounded-xl bg-stone-50 p-4 md:col-span-2 xl:col-span-3">

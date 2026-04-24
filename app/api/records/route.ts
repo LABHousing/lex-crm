@@ -1,5 +1,6 @@
 import { prisma } from "@/app/lib/prisma";
 import { getAuthenticatedUser, isAdmin } from "@/app/lib/auth";
+import { parseFixedCstDateTime } from "@/app/lib/fixed-cst";
 
 const ACTIVE_SELLER_LISTS = ["Leads", "Opportunity", "Appointment"] as const;
 
@@ -208,8 +209,8 @@ export async function POST(req: Request) {
         leadCost: Number(data.leadCost) || 0,
         followUpCount,
         lastContactOutcome: data.lastContactOutcome || null,
-        lastFollowedUpAt: data.lastFollowedUpAt ? new Date(data.lastFollowedUpAt) : null,
-        followUpAt: data.followUpAt ? new Date(data.followUpAt) : null,
+        lastFollowedUpAt: parseFixedCstDateTime(data.lastFollowedUpAt) ?? null,
+        followUpAt: parseFixedCstDateTime(data.followUpAt) ?? null,
         completed,
       },
     });
@@ -258,7 +259,7 @@ export async function PATCH(req: Request) {
       data.lastFollowedUpAt === undefined
         ? existing.lastFollowedUpAt
         : data.lastFollowedUpAt
-          ? new Date(data.lastFollowedUpAt)
+          ? parseFixedCstDateTime(data.lastFollowedUpAt) ?? null
           : null;
     const nextLastContactOutcome =
       data.lastContactOutcome === undefined
@@ -302,7 +303,7 @@ export async function PATCH(req: Request) {
         followUpCount,
         lastContactOutcome: nextLastContactOutcome,
         lastFollowedUpAt: nextLastFollowedUpAt,
-        followUpAt: data.followUpAt ? new Date(data.followUpAt) : null,
+        followUpAt: parseFixedCstDateTime(data.followUpAt) ?? null,
         completed,
       },
     });
