@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id           Int     @id @default(autoincrement())
+  username     String? @unique
+  password     String
+  role         String? @default("viewer")
+  appScope     String? @default("all")
+  recordsScope String? @default("all")
+}
+
+model Lead {
+  id         Int     @id @default(autoincrement())
+  name       String
+  phone      String
+  address    String?
+  motivation String?
+  createdAt  DateTime @default(now())
+}
+
+model Buyer {
+  id        Int     @id @default(autoincrement())
+  name      String
+  phone     String
+  email     String?
+  budget    String?
+  notes     String?
+  createdAt DateTime @default(now())
+}
+
+model Deal {
+  id        Int     @id @default(autoincrement())
+  title     String
+  leadName  String
+  buyerName String
+  status    String  @default("Active")
+  value     String?
+  notes     String?
+  createdAt DateTime @default(now())
+}
+
+model Record {
+  id                Int      @id @default(autoincrement())
+  externalLeadKey   String?  @unique
+  list              String
+  title             String
+  body              String?
+  status            String   @default("Active")
+  priority          String   @default("Medium")
+  leadSource        String?
+  leadCost          Float    @default(0)
+  followUpCount     Int      @default(0)
+  lastContactOutcome String?
+  lastFollowedUpAt DateTime?
+  followUpAt        DateTime?
+  completed         Boolean  @default(false)
+  createdAt         DateTime @default(now())
+}
+
+model ScheduleTodayCard {
+  id                  Int       @id @default(autoincrement())
+  dateKey             String
+  type                String
+  leadId              String
+  sellerName          String?
+  phone               String?
+  address             String?
+  status              String    @default("Queued")
+  priority            String    @default("Medium")
+  reason              String?
+  suggestedMessage    String?
+  suggestedCallOpener String?
+  dueAt               DateTime?
+  completed           Boolean   @default(false)
+  source              String    @default("openclaw")
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@unique([dateKey, leadId, type])
+}
