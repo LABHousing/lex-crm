@@ -138,14 +138,16 @@ function formatCentralDateTime(value: string | null) {
     return "Not set";
   }
 
-  return new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Chicago",
-    year: "numeric",
-    month: "numeric",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(date) + " CST";
+  const fixedCstDate = new Date(date.getTime() - 6 * 60 * 60 * 1000);
+  const month = fixedCstDate.getUTCMonth() + 1;
+  const day = fixedCstDate.getUTCDate();
+  const year = fixedCstDate.getUTCFullYear();
+  const rawHours = fixedCstDate.getUTCHours();
+  const minutes = String(fixedCstDate.getUTCMinutes()).padStart(2, "0");
+  const hour12 = rawHours % 12 || 12;
+  const meridiem = rawHours >= 12 ? "PM" : "AM";
+
+  return `${month}/${day}/${year}, ${hour12}:${minutes} ${meridiem} CST`;
 }
 
 function getWeekStart(date: Date) {
