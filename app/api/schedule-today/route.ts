@@ -159,6 +159,13 @@ export async function POST(req: NextRequest) {
       return Response.json({ error: "Record not found" }, { status: 404 });
     }
 
+    if (record.list === "Buyer/Agent") {
+      return Response.json(
+        { error: "Buyer / Agent records cannot be added to Schedule Today." },
+        { status: 400 }
+      );
+    }
+
     const type =
       typeof data.type === "string" && CARD_TYPES.has(data.type) ? data.type : "follow_up";
     const priority =
