@@ -147,8 +147,7 @@ function formatCentralDateTime(value: string | null) {
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
-    timeZoneName: "short",
-  }).format(date);
+  }).format(date) + " CST";
 }
 
 function getCardScheduleAt(card: ScheduleCard) {
