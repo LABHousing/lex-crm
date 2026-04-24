@@ -130,6 +130,27 @@ function toLocalDateTimeValue(value: string | null) {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
+function formatCentralDateTime(value: string | null) {
+  if (!value) {
+    return "Not set";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "Not set";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Chicago",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+  }).format(date);
+}
+
 function getCardScheduleAt(card: ScheduleCard) {
   const value = card.nextFollowUpDate || card.dueAt;
   if (!value) {
@@ -464,9 +485,7 @@ export default function ScheduleTodayPage() {
               Next Follow-Up
             </div>
             <div className="mt-1 font-medium text-slate-800">
-              {card.nextFollowUpDate || card.dueAt
-                ? new Date(card.nextFollowUpDate || card.dueAt || "").toLocaleString()
-                : "Not set"}
+              {formatCentralDateTime(card.nextFollowUpDate || card.dueAt || null)}
             </div>
           </div>
           <div className="rounded-xl bg-stone-50 p-4 md:col-span-2 xl:col-span-3">

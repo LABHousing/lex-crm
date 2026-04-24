@@ -128,6 +128,27 @@ function toLocalDateTimeValue(value: string | null) {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
+function formatCentralDateTime(value: string | null) {
+  if (!value) {
+    return "Not set";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "Not set";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Chicago",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+  }).format(date);
+}
+
 function getWeekStart(date: Date) {
   const next = new Date(date);
   next.setHours(0, 0, 0, 0);
@@ -694,7 +715,7 @@ export default function RecordsPage() {
                   Next Follow-Up Date
                 </div>
                 <div className="mt-1 font-medium text-slate-800">
-                  {item.followUpAt ? new Date(item.followUpAt).toLocaleString() : "Not set"}
+                  {formatCentralDateTime(item.followUpAt)}
                 </div>
               </div>
             </div>
