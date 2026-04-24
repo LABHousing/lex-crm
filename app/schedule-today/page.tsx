@@ -668,6 +668,7 @@ export default function ScheduleTodayPage() {
   const openCount = cards.filter((card) => !card.completed).length;
   const doneToday = sortCards(cards.filter((card) => card.completed));
   const filteredRecords = records
+    .filter((record) => record.list !== "Buyer/Agent")
     .filter((record) => {
       const haystack = `${record.title} ${record.body || ""} ${record.list}`.toLowerCase();
       return !recordSearch.trim() || haystack.includes(recordSearch.trim().toLowerCase());
@@ -757,7 +758,7 @@ export default function ScheduleTodayPage() {
                 </p>
               </div>
               <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-slate-600">
-                Records loaded: <span className="font-semibold text-slate-900">{records.length}</span>
+                Records loaded: <span className="font-semibold text-slate-900">{filteredRecords.length}</span>
               </div>
             </div>
 
