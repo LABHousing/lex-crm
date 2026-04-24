@@ -81,6 +81,56 @@ const typeLabels: Record<string, string> = {
   review: "Review",
 };
 
+function SummaryStat({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone: string;
+}) {
+  return (
+    <div className="rounded-3xl border border-white/80 bg-white/90 p-5 shadow-[0_18px_45px_rgba(15,23,42,0.06)]">
+      <div className={`text-[11px] font-semibold uppercase tracking-[0.28em] ${tone}`}>
+        {label}
+      </div>
+      <div className="mt-3 text-4xl font-black tracking-tight text-slate-950">{value}</div>
+    </div>
+  );
+}
+
+function ScheduleSection({
+  eyebrow,
+  title,
+  count,
+  tone,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  count: number;
+  tone: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-[30px] border border-white/80 bg-white/90 p-6 shadow-[0_20px_55px_rgba(15,23,42,0.08)]">
+      <div className="mb-5 flex flex-col gap-3 border-b border-stone-200 pb-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div className={`text-xs font-semibold uppercase tracking-[0.3em] ${tone}`}>
+            {eyebrow}
+          </div>
+          <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-950">{title}</h2>
+        </div>
+        <div className="rounded-full border border-stone-200 bg-stone-50 px-4 py-2 text-sm font-semibold text-slate-600">
+          {count} cards
+        </div>
+      </div>
+      {children}
+    </section>
+  );
+}
+
 function priorityRank(card: ScheduleCard) {
   const ranks: Record<string, number> = {
     Urgent: 0,
@@ -790,28 +840,103 @@ export default function ScheduleTodayPage() {
           </div>
         </section>
 
-        {currentUser?.role === "admin" ? (
-          <section className="mb-8 rounded-[28px] border border-white/80 bg-white/90 p-6 shadow-[0_20px_55px_rgba(15,23,42,0.08)]">
-            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-              <div>
+        <div className="mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <SummaryStat label="Top Priority" value={topPriorityCards.length} tone="text-red-600" />
+          <SummaryStat label="Next Up" value={nextUpCards.length} tone="text-amber-600" />
+          <SummaryStat label="Later" value={laterCards.length} tone="text-slate-500" />
+          <SummaryStat label="Finished" value={doneToday.length} tone="text-emerald-700" />
+        </div>
+
+        <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="space-y-8">
+            <ScheduleSection
+              eyebrow="Top Priority"
+              title="Due Today & Overdue"
+              count={topPriorityCards.length}
+              tone="text-red-600"
+            >
+              <div className="grid gap-4">
+                {topPriorityCards.length ? (
+                  topPriorityCards.map(renderCard)
+                ) : (
+                  <p className="rounded-2xl border border-dashed border-stone-300 bg-stone-50 p-5 text-sm text-slate-500">
+                    Nothing due today or overdue.
+                  </p>
+                )}
+              </div>
+            </ScheduleSection>
+
+            <ScheduleSection
+              eyebrow="Next Up"
+              title="Coming Up Soon"
+              count={nextUpCards.length}
+              tone="text-amber-600"
+            >
+              <div className="grid gap-4">
+                {nextUpCards.length ? (
+                  nextUpCards.map(renderCard)
+                ) : (
+                  <p className="rounded-2xl border border-dashed border-stone-300 bg-stone-50 p-5 text-sm text-slate-500">
+                    Nothing coming up soon.
+                  </p>
+                )}
+              </div>
+            </ScheduleSection>
+
+            <ScheduleSection
+              eyebrow="Later"
+              title="Future Follow-Ups"
+              count={laterCards.length}
+              tone="text-slate-500"
+            >
+              <div className="grid gap-4">
+                {laterCards.length ? (
+                  laterCards.map(renderCard)
+                ) : (
+                  <p className="rounded-2xl border border-dashed border-stone-300 bg-stone-50 p-5 text-sm text-slate-500">
+                    Nothing waiting in the later queue.
+                  </p>
+                )}
+              </div>
+            </ScheduleSection>
+
+            <ScheduleSection
+              eyebrow="Finished"
+              title="Finished Today"
+              count={doneToday.length}
+              tone="text-emerald-700"
+            >
+              <div className="grid gap-4">
+                {doneToday.length ? (
+                  doneToday.map(renderCard)
+                ) : (
+                  <p className="rounded-2xl border border-dashed border-stone-300 bg-stone-50 p-5 text-sm text-slate-500">
+                    Nothing marked done yet.
+                  </p>
+                )}
+              </div>
+            </ScheduleSection>
+          </div>
+
+          {currentUser?.role === "admin" ? (
+            <aside className="h-fit rounded-[30px] border border-white/80 bg-white/90 p-6 shadow-[0_20px_55px_rgba(15,23,42,0.08)] xl:sticky xl:top-6">
+              <div className="flex flex-col gap-3 border-b border-stone-200 pb-5">
                 <div className="text-xs font-semibold uppercase tracking-[0.3em] text-stone-500">
                   Manual Control
                 </div>
-                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
-                  Add any record to Schedule Today
+                <h2 className="text-2xl font-semibold tracking-tight text-slate-950">
+                  Add a record to today&apos;s board
                 </h2>
-                <p className="mt-2 max-w-2xl text-sm text-slate-600">
-                  You decide what lands here. Pick a record, choose the task type, and it goes on
-                  today&apos;s board right away.
+                <p className="text-sm text-slate-600">
+                  Pull a record into Schedule Today without changing your existing card setup.
                 </p>
+                <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-slate-600">
+                  Records loaded:{" "}
+                  <span className="font-semibold text-slate-900">{filteredRecords.length}</span>
+                </div>
               </div>
-              <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-slate-600">
-                Records loaded: <span className="font-semibold text-slate-900">{filteredRecords.length}</span>
-              </div>
-            </div>
 
-            <div className="mt-5 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-              <div className="space-y-3">
+              <div className="mt-5 space-y-3">
                 <input
                   value={recordSearch}
                   onChange={(event) => setRecordSearch(event.target.value)}
@@ -848,10 +973,12 @@ export default function ScheduleTodayPage() {
                       {stripPhone(selectedRecord.title) || selectedRecord.title}
                     </div>
                     <div className="mt-1">
-                      {[extractPhone(selectedRecord.title), selectedRecord.list].filter(Boolean).join(" | ")}
+                      {[extractPhone(selectedRecord.title), selectedRecord.list]
+                        .filter(Boolean)
+                        .join(" | ")}
                     </div>
                     {selectedRecord.body ? (
-                      <div className="mt-2 line-clamp-3 whitespace-pre-wrap text-slate-600">
+                      <div className="mt-2 line-clamp-4 whitespace-pre-wrap text-slate-600">
                         {selectedRecord.body}
                       </div>
                     ) : null}
@@ -859,7 +986,7 @@ export default function ScheduleTodayPage() {
                 ) : null}
               </div>
 
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-1">
                 <select
                   value={addCardForm.type}
                   onChange={(event) =>
@@ -900,7 +1027,7 @@ export default function ScheduleTodayPage() {
                       nextFollowUpDate: event.target.value,
                     }))
                   }
-                  className="rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm md:col-span-2"
+                  className="rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm md:col-span-2 xl:col-span-1"
                 />
                 <textarea
                   value={addCardForm.reason}
@@ -909,7 +1036,7 @@ export default function ScheduleTodayPage() {
                   }
                   placeholder="Why this belongs on today’s board"
                   rows={3}
-                  className="rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm md:col-span-2"
+                  className="rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm md:col-span-2 xl:col-span-1"
                 />
                 <textarea
                   value={addCardForm.suggestedCallOpener}
@@ -921,7 +1048,7 @@ export default function ScheduleTodayPage() {
                   }
                   placeholder="Suggested call opener"
                   rows={3}
-                  className="rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm md:col-span-2"
+                  className="rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm md:col-span-2 xl:col-span-1"
                 />
                 <textarea
                   value={addCardForm.suggestedMessage}
@@ -930,100 +1057,19 @@ export default function ScheduleTodayPage() {
                   }
                   placeholder="Suggested text"
                   rows={3}
-                  className="rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm md:col-span-2"
+                  className="rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm md:col-span-2 xl:col-span-1"
                 />
                 <button
                   onClick={() => void addCardToSchedule()}
                   disabled={addingCard}
-                  className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-black disabled:bg-slate-400 md:col-span-2"
+                  className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-black disabled:bg-slate-400 md:col-span-2 xl:col-span-1"
                 >
                   {addingCard ? "Adding..." : "Add to Schedule Today"}
                 </button>
               </div>
-            </div>
-          </section>
-        ) : null}
-
-        <div className="space-y-8">
-          <section>
-            <div className="mb-3 flex items-center justify-between">
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.3em] text-red-600">
-                  Top Priority
-                </div>
-                <h2 className="text-2xl font-black">Due Today & Overdue</h2>
-              </div>
-              <span className="text-sm text-gray-600">{topPriorityCards.length} cards</span>
-            </div>
-            <div className="grid gap-4">
-              {topPriorityCards.length ? (
-                topPriorityCards.map(renderCard)
-              ) : (
-                <p className="rounded-xl border bg-white p-5 text-gray-500">
-                  Nothing due today or overdue.
-                </p>
-              )}
-            </div>
-          </section>
-
-          <section>
-            <div className="mb-3 flex items-center justify-between">
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.3em] text-amber-600">
-                  Next Up
-                </div>
-                <h2 className="text-2xl font-black">Coming Up Soon</h2>
-              </div>
-              <span className="text-sm text-gray-600">{nextUpCards.length} cards</span>
-            </div>
-            <div className="grid gap-4">
-              {nextUpCards.length ? (
-                nextUpCards.map(renderCard)
-              ) : (
-                <p className="rounded-xl border bg-white p-5 text-gray-500">
-                  Nothing coming up soon.
-                </p>
-              )}
-            </div>
-          </section>
-
-          <section>
-            <div className="mb-3 flex items-center justify-between">
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
-                  Later
-                </div>
-                <h2 className="text-2xl font-black">Future Follow-Ups</h2>
-              </div>
-              <span className="text-sm text-gray-600">{laterCards.length} cards</span>
-            </div>
-            <div className="grid gap-4">
-              {laterCards.length ? (
-                laterCards.map(renderCard)
-              ) : (
-                <p className="rounded-xl border bg-white p-5 text-gray-500">
-                  Nothing waiting in the later queue.
-                </p>
-              )}
-            </div>
-          </section>
+            </aside>
+          ) : null}
         </div>
-
-        <section className="mt-8">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-2xl font-black">Finished Today</h2>
-            <span className="text-sm text-gray-600">{doneToday.length} cards</span>
-          </div>
-          <div className="grid gap-4">
-            {doneToday.length ? (
-              doneToday.map(renderCard)
-            ) : (
-              <p className="rounded-xl border bg-white p-5 text-gray-500">
-                Nothing marked done yet.
-              </p>
-            )}
-          </div>
-        </section>
       </div>
     </main>
   );
