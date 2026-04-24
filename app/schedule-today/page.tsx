@@ -321,6 +321,35 @@ export default function ScheduleTodayPage() {
     }
   }
 
+  async function removeFromSchedule(card: ScheduleCard) {
+    if (!confirm("Remove this card from Schedule Today?")) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/schedule-today/${card.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: "Removed",
+          completed: false,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to remove card");
+      }
+
+      setCards((prev) => prev.filter((item) => item.id !== card.id));
+      if (editingCardId === card.id) {
+        stopEditing();
+      }
+    } catch (error) {
+      console.error("Failed to remove card", error);
+      alert("Failed to remove card from Schedule Today");
+    }
+  }
+
   async function addCardToSchedule() {
     if (!addCardForm.recordId) {
       alert("Choose a record to add.");
@@ -436,6 +465,12 @@ export default function ScheduleTodayPage() {
                 className="rounded bg-gray-900 px-3 py-2 text-sm font-semibold text-white hover:bg-black"
               >
                 {isEditing ? "Close" : "Edit"}
+              </button>
+              <button
+                onClick={() => void removeFromSchedule(card)}
+                className="rounded border border-stone-300 bg-white px-3 py-2 text-sm font-semibold text-stone-700 hover:bg-stone-50"
+              >
+                Remove
               </button>
             </div>
           ) : null}

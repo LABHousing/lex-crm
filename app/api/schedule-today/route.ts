@@ -81,6 +81,13 @@ export async function GET(req: NextRequest) {
     }
 
     const dateKey = req.nextUrl.searchParams.get("dateKey") || getDateKey();
+    const existingCards = await prisma.scheduleTodayCard.findMany({
+      where: { dateKey },
+    });
+    const existingCardMap = new Map(
+      existingCards.map((card) => [`${card.leadId}:${card.type}`, card])
+    );
+
     const activeRecords = await prisma.record.findMany({
       where:
         currentUser?.recordsScope === "contract-only"
@@ -101,12 +108,28 @@ export async function GET(req: NextRequest) {
     });
 
     await Promise.all(
-      activeRecords.map((record) =>
-        prisma.scheduleTodayCard.upsert({
+      activeRecords.map((record) => {
+        const leadId = `record-${record.id}`;
+        const existingCard = existingCardMap.get(`${leadId}:follow_up`);
+
+        if (existingCard?.status === "Removed") {
+          return prisma.scheduleTodayCard.update({
+            where: { id: existingCard.id },
+            data: {
+              sellerName: stripPhone(record.title) || record.title,
+              phone: extractPhone(`${record.title} ${record.body || ""}`),
+              address: findAddress(record.body),
+              priority: PRIORITIES.has(record.priority) ? record.priority : "Medium",
+              dueAt: record.followUpAt,
+            },
+          });
+        }
+
+        return prisma.scheduleTodayCard.upsert({
           where: {
             dateKey_leadId_type: {
               dateKey,
-              leadId: `record-${record.id}`,
+              leadId,
               type: "follow_up",
             },
           },
@@ -121,7 +144,7 @@ export async function GET(req: NextRequest) {
           },
           create: {
             dateKey,
-            leadId: `record-${record.id}`,
+            leadId,
             type: "follow_up",
             sellerName: stripPhone(record.title) || record.title,
             phone: extractPhone(`${record.title} ${record.body || ""}`),
@@ -135,12 +158,17 @@ export async function GET(req: NextRequest) {
             completed: false,
             source: "manual",
           },
-        })
-      )
+        });
+      })
     );
 
     const cards = await prisma.scheduleTodayCard.findMany({
-      where: { dateKey },
+      where: {
+        dateKey,
+        status: {
+          not: "Removed",
+        },
+      },
       orderBy: [{ completed: "asc" }, { dueAt: "asc" }, { priority: "desc" }],
     });
     const recordIds = cards
