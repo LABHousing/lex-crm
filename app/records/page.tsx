@@ -83,7 +83,7 @@ const LIST_ORDER = [
   "Closed",
 ] as const;
 
-const ALWAYS_VISIBLE_LISTS = ["Terms Rejected/Follow up"] as const;
+const ALWAYS_VISIBLE_LISTS = ["Terms Rejected/Follow up", "Closed"] as const;
 
 const SELLER_LISTS = [
   "Dead",
@@ -160,6 +160,14 @@ function getMonthEnd(date: Date) {
 
 function getListAnchor(listName: string) {
   return `list-${listName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+}
+
+function getListDisplayName(listName: string) {
+  if (listName === "Closed") {
+    return "Close";
+  }
+
+  return listName;
 }
 
 function getStatusAnchor(statusName: string) {
@@ -527,7 +535,7 @@ export default function RecordsPage() {
               >
                 {LIST_ORDER.map((option) => (
                   <option key={option} value={option}>
-                    {option}
+                    {getListDisplayName(option)}
                   </option>
                 ))}
               </select>
@@ -1057,7 +1065,9 @@ export default function RecordsPage() {
                         href={`#${getListAnchor(listName)}`}
                         className="block rounded-2xl border border-stone-200 bg-white px-4 py-3 transition-colors hover:border-stone-300 hover:bg-stone-50"
                       >
-                        <div className="text-lg font-semibold text-slate-900">{listName}</div>
+                        <div className="text-lg font-semibold text-slate-900">
+                          {getListDisplayName(listName)}
+                        </div>
                         <div className="mt-1 text-sm text-gray-600">
                           {(groupedRecords[listName] || []).length} items
                         </div>
@@ -1165,7 +1175,9 @@ export default function RecordsPage() {
           return (
           <section key={listName} id={getListAnchor(listName)}>
                   <div className="mb-3 flex items-center justify-between">
-                    <h2 className="text-xl font-semibold text-slate-900">{listName}</h2>
+                    <h2 className="text-xl font-semibold text-slate-900">
+                      {getListDisplayName(listName)}
+                    </h2>
                     <span className="text-sm text-gray-500">{items.length} items</span>
                   </div>
 
