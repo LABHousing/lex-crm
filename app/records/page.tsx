@@ -50,6 +50,28 @@ type PipelineCard = {
   tone: string;
 };
 
+function buildRecordEditForm(record: RecordItem): EditForm {
+  return {
+    list: record.list,
+    title: record.title,
+    body: record.body ?? "",
+    status:
+      record.completed || record.status === "Finished"
+        ? "Finished"
+        : record.priority === "Urgent" || record.status === "Urgent"
+          ? "Urgent"
+          : "Active",
+    priority: record.priority || "Medium",
+    leadSource: record.leadSource || "",
+    leadCost: String(record.leadCost ?? 0),
+    followUpCount: String(record.followUpCount ?? 0),
+    lastContactOutcome: record.lastContactOutcome || "",
+    lastFollowedUpAt: toFixedCstDateTimeInput(record.lastFollowedUpAt),
+    followUpAt: toFixedCstDateTimeInput(record.followUpAt),
+    completed: record.completed,
+  };
+}
+
 const LIST_ORDER = [
   "Dead",
   "Leads",
@@ -257,6 +279,8 @@ export default function RecordsPage() {
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<EditForm | null>(null);
+  const [editSnapshot, setEditSnapshot] = useState("");
+  const [savingId, setSavingId] = useState<number | null>(null);
   const [sidebarWidth, setSidebarWidth] = useState(320);
   const [sidebarSearch, setSidebarSearch] = useState("");
 
@@ -292,46 +316,39 @@ export default function RecordsPage() {
   }
 
   function startEditing(record: RecordItem) {
+    const nextForm = buildRecordEditForm(record);
     setEditingId(record.id);
-    setEditForm({
-      list: record.list,
-      title: record.title,
-      body: record.body ?? "",
-      status:
-        record.completed || record.status === "Finished"
-          ? "Finished"
-          : record.priority === "Urgent" || record.status === "Urgent"
-            ? "Urgent"
-            : "Active",
-      priority: record.priority || "Medium",
-      leadSource: record.leadSource || "",
-      leadCost: String(record.leadCost ?? 0),
-      followUpCount: String(record.followUpCount ?? 0),
-      lastContactOutcome: record.lastContactOutcome || "",
-      lastFollowedUpAt: toFixedCstDateTimeInput(record.lastFollowedUpAt),
-      followUpAt: toFixedCstDateTimeInput(record.followUpAt),
-      completed: record.completed,
-    });
+    setEditForm(nextForm);
+    setEditSnapshot(JSON.stringify(nextForm));
   }
 
   function cancelEditing() {
     setEditingId(null);
     setEditForm(null);
+    setEditSnapshot("");
   }
 
-  async function saveRecord(id: number) {
-    if (!editForm) return;
+  async function saveRecord(
+    id: number,
+    options?: {
+      keepEditing?: boolean;
+      formOverride?: EditForm;
+    }
+  ) {
+    const formToSave = options?.formOverride ?? editForm;
+    if (!formToSave) return;
 
     try {
+      setSavingId(id);
       const res = await fetch("/api/records", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id,
-          ...editForm,
-          status: editForm.completed
+          ...formToSave,
+          status: formToSave.completed
             ? "Finished"
-            : editForm.priority === "Urgent"
+            : formToSave.priority === "Urgent"
               ? "Urgent"
               : "Active",
         }),
@@ -344,12 +361,42 @@ export default function RecordsPage() {
 
       const updated = await res.json();
       setRecords((prev) => prev.map((record) => (record.id === id ? updated : record)));
-      cancelEditing();
+      if (options?.keepEditing) {
+        const nextForm = buildRecordEditForm(updated);
+        setEditForm(nextForm);
+        setEditSnapshot(JSON.stringify(nextForm));
+      } else {
+        cancelEditing();
+      }
     } catch (error) {
       console.error("Failed to update record", error);
       alert(error instanceof Error ? error.message : "Failed to update record");
+    } finally {
+      setSavingId(null);
     }
   }
+
+  useEffect(() => {
+    if (!editingId || !editForm) {
+      return;
+    }
+
+    const nextSnapshot = JSON.stringify(editForm);
+    if (nextSnapshot === editSnapshot) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void saveRecord(editingId, {
+        keepEditing: true,
+        formOverride: editForm,
+      });
+    }, 700);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [editingId, editForm, editSnapshot]);
 
   async function deleteRecord(id: number) {
     if (!confirm("Delete this record?")) {
@@ -592,9 +639,10 @@ export default function RecordsPage() {
             <div className="flex flex-wrap gap-3">
               <button
                 onClick={() => void saveRecord(item.id)}
+                disabled={savingId === item.id}
                 className="rounded-full bg-slate-900 px-5 py-2.5 text-white hover:bg-slate-800"
               >
-                Save
+                {savingId === item.id ? "Saving..." : "Save now"}
               </button>
               <button
                 onClick={cancelEditing}

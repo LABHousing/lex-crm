@@ -222,6 +222,7 @@ export default function ScheduleTodayPage() {
   const [dateKey, setDateKey] = useState("");
   const [editingCardId, setEditingCardId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<EditForm | null>(null);
+  const [editSnapshot, setEditSnapshot] = useState("");
   const [savingId, setSavingId] = useState<number | null>(null);
   const [addCardForm, setAddCardForm] = useState<AddCardForm>({
     recordId: "",
@@ -301,17 +302,27 @@ export default function ScheduleTodayPage() {
   }
 
   function startEditing(card: ScheduleCard) {
+    const nextForm = buildEditForm(card);
     setEditingCardId(card.id);
-    setEditForm(buildEditForm(card));
+    setEditForm(nextForm);
+    setEditSnapshot(JSON.stringify(nextForm));
   }
 
   function stopEditing() {
     setEditingCardId(null);
     setEditForm(null);
+    setEditSnapshot("");
   }
 
-  async function saveCard(cardId: number) {
-    if (!editForm) {
+  async function saveCard(
+    cardId: number,
+    options?: {
+      keepEditing?: boolean;
+      formOverride?: EditForm;
+    }
+  ) {
+    const formToSave = options?.formOverride ?? editForm;
+    if (!formToSave) {
       return;
     }
 
@@ -321,8 +332,8 @@ export default function ScheduleTodayPage() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...editForm,
-          dueAt: editForm.nextFollowUpDate || null,
+          ...formToSave,
+          dueAt: formToSave.nextFollowUpDate || null,
         }),
       });
 
@@ -332,7 +343,13 @@ export default function ScheduleTodayPage() {
 
       const updated = await res.json();
       setCards((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
-      stopEditing();
+      if (options?.keepEditing) {
+        const nextForm = buildEditForm(updated);
+        setEditForm(nextForm);
+        setEditSnapshot(JSON.stringify(nextForm));
+      } else {
+        stopEditing();
+      }
     } catch (error) {
       console.error("Failed to save card", error);
       alert("Failed to save schedule card");
@@ -340,6 +357,28 @@ export default function ScheduleTodayPage() {
       setSavingId(null);
     }
   }
+
+  useEffect(() => {
+    if (!editingCardId || !editForm) {
+      return;
+    }
+
+    const nextSnapshot = JSON.stringify(editForm);
+    if (nextSnapshot === editSnapshot) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void saveCard(editingCardId, {
+        keepEditing: true,
+        formOverride: editForm,
+      });
+    }, 700);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [editingCardId, editForm, editSnapshot]);
 
   async function revisitCard(card: ScheduleCard) {
     try {
@@ -717,7 +756,7 @@ export default function ScheduleTodayPage() {
                 disabled={savingId === card.id}
                 className="rounded bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-gray-800 disabled:bg-gray-400"
               >
-                {savingId === card.id ? "Saving..." : "Save changes"}
+                {savingId === card.id ? "Saving..." : "Save now"}
               </button>
               <button
                 onClick={() =>

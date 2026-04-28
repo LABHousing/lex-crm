@@ -24,16 +24,11 @@ const RECORD_LIST_OPTIONS = [
   "Dead",
 ] as const;
 
-const LEAD_NOTES_TEMPLATE = `Asking price:
-What can you tell about the property?
-sq.ft beds bath
-What’s got you thinking about selling?:
-What happens if it doesn’t sell?:
-Timeline:
-What kind of updates or repairs does the property need?:
-HOA:
-Occupancy:
-If we could make this simple and close quickly, how flexible are you on price?:`;
+const LEAD_NOTES_TEMPLATE = `"Tell me a little about what's going on, what has you wanting to sell right now?"
+2. "Assuming we agree on an acceptable offer, how soon are you hoping to close and get cash in your pocket?"
+3. "Tell me a little about the condition, have there been any updates done in the last 5 years?"
+4. "In order to make a decision about selling your property, is there anyone else that you would need to get on board, like a spouse?"
+5. "I'm not saying I can but if I could get you an acceptable offer, would you be opposed to putting together an agreement today?"`;
 
 export default function LeadsPage() {
   const router = useRouter();
