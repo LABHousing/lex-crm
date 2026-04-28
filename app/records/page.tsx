@@ -302,7 +302,6 @@ export default function RecordsPage() {
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<EditForm | null>(null);
-  const [editSnapshot, setEditSnapshot] = useState("");
   const [savingId, setSavingId] = useState<number | null>(null);
   const [sidebarWidth, setSidebarWidth] = useState(320);
   const [sidebarSearch, setSidebarSearch] = useState("");
@@ -339,26 +338,17 @@ export default function RecordsPage() {
   }
 
   function startEditing(record: RecordItem) {
-    const nextForm = buildRecordEditForm(record);
     setEditingId(record.id);
-    setEditForm(nextForm);
-    setEditSnapshot(JSON.stringify(nextForm));
+    setEditForm(buildRecordEditForm(record));
   }
 
   function cancelEditing() {
     setEditingId(null);
     setEditForm(null);
-    setEditSnapshot("");
   }
 
-  async function saveRecord(
-    id: number,
-    options?: {
-      keepEditing?: boolean;
-      formOverride?: EditForm;
-    }
-  ) {
-    const formToSave = options?.formOverride ?? editForm;
+  async function saveRecord(id: number) {
+    const formToSave = editForm;
     if (!formToSave) return;
 
     try {
@@ -384,13 +374,7 @@ export default function RecordsPage() {
 
       const updated = await res.json();
       setRecords((prev) => prev.map((record) => (record.id === id ? updated : record)));
-      if (options?.keepEditing) {
-        const nextForm = buildRecordEditForm(updated);
-        setEditForm(nextForm);
-        setEditSnapshot(JSON.stringify(nextForm));
-      } else {
-        cancelEditing();
-      }
+      cancelEditing();
     } catch (error) {
       console.error("Failed to update record", error);
       alert(error instanceof Error ? error.message : "Failed to update record");
@@ -398,28 +382,6 @@ export default function RecordsPage() {
       setSavingId(null);
     }
   }
-
-  useEffect(() => {
-    if (!editingId || !editForm) {
-      return;
-    }
-
-    const nextSnapshot = JSON.stringify(editForm);
-    if (nextSnapshot === editSnapshot) {
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      void saveRecord(editingId, {
-        keepEditing: true,
-        formOverride: editForm,
-      });
-    }, 700);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [editingId, editForm, editSnapshot]);
 
   async function deleteRecord(id: number) {
     if (!confirm("Delete this record?")) {

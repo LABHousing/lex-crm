@@ -222,7 +222,6 @@ export default function ScheduleTodayPage() {
   const [dateKey, setDateKey] = useState("");
   const [editingCardId, setEditingCardId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<EditForm | null>(null);
-  const [editSnapshot, setEditSnapshot] = useState("");
   const [savingId, setSavingId] = useState<number | null>(null);
   const [addCardForm, setAddCardForm] = useState<AddCardForm>({
     recordId: "",
@@ -302,26 +301,17 @@ export default function ScheduleTodayPage() {
   }
 
   function startEditing(card: ScheduleCard) {
-    const nextForm = buildEditForm(card);
     setEditingCardId(card.id);
-    setEditForm(nextForm);
-    setEditSnapshot(JSON.stringify(nextForm));
+    setEditForm(buildEditForm(card));
   }
 
   function stopEditing() {
     setEditingCardId(null);
     setEditForm(null);
-    setEditSnapshot("");
   }
 
-  async function saveCard(
-    cardId: number,
-    options?: {
-      keepEditing?: boolean;
-      formOverride?: EditForm;
-    }
-  ) {
-    const formToSave = options?.formOverride ?? editForm;
+  async function saveCard(cardId: number) {
+    const formToSave = editForm;
     if (!formToSave) {
       return;
     }
@@ -343,13 +333,7 @@ export default function ScheduleTodayPage() {
 
       const updated = await res.json();
       setCards((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
-      if (options?.keepEditing) {
-        const nextForm = buildEditForm(updated);
-        setEditForm(nextForm);
-        setEditSnapshot(JSON.stringify(nextForm));
-      } else {
-        stopEditing();
-      }
+      stopEditing();
     } catch (error) {
       console.error("Failed to save card", error);
       alert("Failed to save schedule card");
@@ -357,28 +341,6 @@ export default function ScheduleTodayPage() {
       setSavingId(null);
     }
   }
-
-  useEffect(() => {
-    if (!editingCardId || !editForm) {
-      return;
-    }
-
-    const nextSnapshot = JSON.stringify(editForm);
-    if (nextSnapshot === editSnapshot) {
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      void saveCard(editingCardId, {
-        keepEditing: true,
-        formOverride: editForm,
-      });
-    }, 700);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [editingCardId, editForm, editSnapshot]);
 
   async function revisitCard(card: ScheduleCard) {
     try {
