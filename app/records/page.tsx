@@ -182,6 +182,18 @@ function isCompletedRecord(record: RecordItem) {
   return record.status === "Finished" || record.completed;
 }
 
+function shouldKeepInSourceList(record: RecordItem, showStatusGroups: boolean) {
+  if (!showStatusGroups) {
+    return true;
+  }
+
+  if (record.list === "Closed") {
+    return true;
+  }
+
+  return !isUrgentRecord(record) && !isCompletedRecord(record);
+}
+
 function toPercent(numerator: number, denominator: number) {
   if (denominator <= 0) return null;
   return Math.round((numerator / denominator) * 100);
@@ -477,11 +489,7 @@ export default function RecordsPage() {
     }
 
     const visibleItems = (groupedRecords[listName] || []).filter((record) => {
-      if (!showStatusGroups) {
-        return true;
-      }
-
-      return !isUrgentRecord(record) && !isCompletedRecord(record);
+      return shouldKeepInSourceList(record, showStatusGroups);
     });
 
     return visibleItems.length > 0;
@@ -1164,13 +1172,9 @@ export default function RecordsPage() {
             ) : null}
 
         {orderedLists.map((listName) => {
-          const items = (groupedRecords[listName] || []).filter((record) => {
-            if (!showStatusGroups) {
-              return true;
-            }
-
-            return !isUrgentRecord(record) && !isCompletedRecord(record);
-          });
+          const items = (groupedRecords[listName] || []).filter((record) =>
+            shouldKeepInSourceList(record, showStatusGroups)
+          );
 
           return (
           <section key={listName} id={getListAnchor(listName)}>
