@@ -78,9 +78,12 @@ const LIST_ORDER = [
   "Buyer/Agent",
   "Opportunity",
   "Appointment",
+  "Terms Rejected/Follow up",
   "Contract",
   "Closed",
 ] as const;
+
+const ALWAYS_VISIBLE_LISTS = ["Terms Rejected/Follow up"] as const;
 
 const SELLER_LISTS = [
   "Dead",
@@ -459,6 +462,10 @@ export default function RecordsPage() {
   const orderedLists = LIST_ORDER.filter((listName) => {
     if (currentUser?.recordsScope === "contract-only") {
       return listName === "Contract" && groupedRecords[listName]?.length;
+    }
+
+    if (ALWAYS_VISIBLE_LISTS.includes(listName as (typeof ALWAYS_VISIBLE_LISTS)[number])) {
+      return true;
     }
 
     const visibleItems = (groupedRecords[listName] || []).filter((record) => {
@@ -1052,7 +1059,7 @@ export default function RecordsPage() {
                       >
                         <div className="text-lg font-semibold text-slate-900">{listName}</div>
                         <div className="mt-1 text-sm text-gray-600">
-                          {groupedRecords[listName].length} items
+                          {(groupedRecords[listName] || []).length} items
                         </div>
                       </a>
                     ))}
@@ -1162,7 +1169,13 @@ export default function RecordsPage() {
                     <span className="text-sm text-gray-500">{items.length} items</span>
                   </div>
 
-                  <div className="grid gap-4">{items.map((item) => renderRecordCard(item))}</div>
+                  {items.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-stone-300 bg-white px-4 py-3 text-sm text-stone-500">
+                      No records in this section yet.
+                    </div>
+                  ) : (
+                    <div className="grid gap-4">{items.map((item) => renderRecordCard(item))}</div>
+                  )}
                 </section>
               );
             })}
