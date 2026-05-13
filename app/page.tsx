@@ -16,6 +16,13 @@ const sellerReasons = [
   "Need a faster sale",
 ];
 
+const sellerSituations = [
+  "Vacant or inherited property",
+  "Tenant issues or deferred maintenance",
+  "Storm, water, or fire damage",
+  "You need speed, privacy, and clarity",
+];
+
 const processSteps = [
   {
     title: "Share the basics",
@@ -40,10 +47,28 @@ const trustPoints = [
   "Straightforward communication and flexible timing",
 ];
 
+const offerHighlights = [
+  {
+    label: "Condition",
+    value: "Any shape",
+    note: "From clean updates to major cleanup jobs.",
+  },
+  {
+    label: "Timeline",
+    value: "Your pace",
+    note: "Move fast or take time to think through options.",
+  },
+  {
+    label: "Conversation",
+    value: "Direct",
+    note: "No pressure, just a real next step.",
+  },
+];
+
 const detailCards = [
   {
     title: "As-is means as-is",
-    body: "You do not need to repaint, clean out the garage, or fix every issue before reaching out.",
+    body: "You do not need to repaint, clean out debris, or finish every project before reaching out.",
   },
   {
     title: "Flexible timing",
@@ -60,12 +85,17 @@ const detailCards = [
 ];
 
 const pageImages = {
-  frontExterior:
-    "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1200&q=80",
-  kitchenInterior:
-    "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=80",
-  neighborhoodHome:
-    "https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=1200&q=80",
+  renovatedBath: "/uploads/img-0402.jpg",
+  distressedStairwell: "/uploads/img-1439-final.jpg",
+  refreshedKitchen: "/uploads/img-9707-final.jpg",
+  damagedPorch: "/uploads/img-1595-fixed.jpg",
+};
+
+const contactDetails = {
+  phone: "(833) 600-8355",
+  phoneHref: "tel:+18336008355",
+  email: "lex@bonillabuilding.com",
+  emailHref: "mailto:lex@bonillabuilding.com",
 };
 
 export default function Home() {
@@ -76,6 +106,30 @@ export default function Home() {
           <div className="flex items-center justify-between gap-4">
             <BrandLogo compact className="scale-[0.95] origin-left" />
             <nav className="flex items-center gap-3">
+              <Link
+                href="/"
+                className="hidden text-sm font-medium text-neutral-600 sm:inline"
+              >
+                Home
+              </Link>
+              <Link
+                href="/how-it-works"
+                className="hidden text-sm font-medium text-neutral-600 sm:inline"
+              >
+                How It Works
+              </Link>
+              <a
+                href={contactDetails.phoneHref}
+                className="hidden text-sm font-medium text-neutral-600 md:inline"
+              >
+                {contactDetails.phone}
+              </a>
+              <a
+                href={contactDetails.emailHref}
+                className="hidden text-sm font-medium text-neutral-500 lg:inline"
+              >
+                {contactDetails.email}
+              </a>
               <Link
                 href="#offer-form"
                 className="text-sm font-medium text-neutral-600"
@@ -90,16 +144,16 @@ export default function Home() {
           <div className="max-w-3xl">
             <BrandLogo className="mb-6 items-start" />
             <p className="mb-4 text-sm font-medium uppercase tracking-[0.35em] text-neutral-500">
-              Direct home buyer
+              A cleaner path for home sellers
             </p>
             <h1 className="max-w-4xl text-5xl font-semibold leading-[0.95] tracking-[-0.04em] text-neutral-950 md:text-7xl">
-              A clean way to sell your house without the usual mess.
+              Sell the house in its current condition and skip the usual chaos.
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-neutral-600 md:text-xl">
-              If you are thinking about selling, we make the first step simple.
-              No pressure, no repairs, no drawn-out guessing. Just tell us about
-              the property and we will reach out with a straightforward next
-              step.
+              Whether the property is cleaned up, half-finished, inherited, or
+              needs major work, we make the first conversation simple. Tell us
+              what is going on and we will talk through a clear next step with
+              no pressure.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
@@ -110,6 +164,17 @@ export default function Home() {
                 >
                   {reason}
                 </span>
+              ))}
+            </div>
+
+            <div className="mt-8 grid gap-3 sm:grid-cols-2">
+              {sellerSituations.map((item) => (
+                <div
+                  key={item}
+                  className="rounded-2xl border border-black/8 bg-white/65 px-4 py-3 text-sm text-neutral-700"
+                >
+                  {item}
+                </div>
               ))}
             </div>
 
@@ -127,33 +192,34 @@ export default function Home() {
             <div className="mt-10 grid gap-4 md:grid-cols-[1.25fr_0.75fr]">
               <div className="overflow-hidden rounded-[2rem] border border-black/10 bg-white/70 shadow-[0_20px_70px_rgba(0,0,0,0.06)]">
                 <img
-                  src={pageImages.frontExterior}
-                  alt="Bright modern house exterior"
+                  src={pageImages.renovatedBath}
+                  alt="Updated bathroom renovation"
                   className="h-72 w-full object-cover"
                 />
               </div>
               <div className="grid gap-4">
                 <div className="overflow-hidden rounded-[1.5rem] border border-black/10 bg-white/70 shadow-[0_20px_70px_rgba(0,0,0,0.05)]">
-                  <img
-                    src={pageImages.kitchenInterior}
-                    alt="Clean kitchen interior"
-                    className="h-36 w-full object-cover"
-                  />
+                <img
+                  src={pageImages.refreshedKitchen}
+                  alt="Fresh kitchen cabinets and finishes"
+                  className="h-36 w-full -rotate-90 scale-[1.45] object-cover"
+                />
                 </div>
                 <div className="rounded-[1.5rem] border border-black/10 bg-white/80 p-5 shadow-[0_20px_70px_rgba(0,0,0,0.05)]">
                   <p className="text-xs font-medium uppercase tracking-[0.28em] text-neutral-400">
-                    Seller focus
+                    Real-world seller focus
                   </p>
                   <p className="mt-3 text-sm leading-6 text-neutral-700">
-                    Built to feel calm, clear, and easy for homeowners who want
-                    one simple next step.
+                    We buy houses people are proud of and houses people are
+                    overwhelmed by. The point is making it easier to move
+                    forward either way.
                   </p>
                 </div>
               </div>
             </div>
           </div>
 
-          <div
+            <div
             id="offer-form"
             className="rounded-[2rem] border border-black/10 bg-white/92 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.08)] md:p-8"
           >
@@ -165,9 +231,43 @@ export default function Home() {
                 Tell us about the property.
               </h2>
               <p className="mt-3 text-sm leading-6 text-neutral-600">
-                We built this page for sellers who want a fast, simple
-                conversation and real options.
+                We built this for sellers who want a fast, simple conversation,
+                honest feedback, and a clean option without fixing everything
+                first.
               </p>
+              <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-neutral-600">
+                <a
+                  href={contactDetails.phoneHref}
+                  className="font-medium text-neutral-800"
+                >
+                  {contactDetails.phone}
+                </a>
+                <a
+                  href={contactDetails.emailHref}
+                  className="text-neutral-700"
+                >
+                  {contactDetails.email}
+                </a>
+              </div>
+            </div>
+
+            <div className="mb-6 grid gap-3 sm:grid-cols-3">
+              {offerHighlights.map((item) => (
+                <div
+                  key={item.label}
+                  className="rounded-2xl border border-black/8 bg-[#f6f1e7] px-4 py-4"
+                >
+                  <div className="text-[11px] uppercase tracking-[0.24em] text-neutral-500">
+                    {item.label}
+                  </div>
+                  <div className="mt-2 text-lg font-semibold text-neutral-950">
+                    {item.value}
+                  </div>
+                  <div className="mt-1 text-xs leading-5 text-neutral-600">
+                    {item.note}
+                  </div>
+                </div>
+              ))}
             </div>
 
             <SellerLeadForm />
@@ -203,14 +303,28 @@ export default function Home() {
               Built for real situations
             </p>
             <h2 className="mt-4 text-4xl font-semibold tracking-[-0.04em] text-neutral-950 md:text-5xl">
-              When the house feels heavy, the process should feel lighter.
+              Some sellers have a clean property. Some sellers have a real mess.
             </h2>
-            <div className="mt-8 overflow-hidden rounded-[2rem] border border-black/10 bg-white/75 shadow-[0_20px_70px_rgba(0,0,0,0.05)]">
-              <img
-                src={pageImages.neighborhoodHome}
-                alt="Beautiful neighborhood home"
-                className="h-80 w-full object-cover"
-              />
+            <p className="mt-4 max-w-xl text-base leading-7 text-neutral-600">
+              That is exactly why the page should feel honest. We work with
+              updated properties, partial rehabs, water-damaged rooms, clutter,
+              and inherited situations where the owner just wants clarity.
+            </p>
+            <div className="mt-8 grid gap-4 sm:grid-cols-2">
+              <div className="overflow-hidden rounded-[2rem] border border-black/10 bg-white/75 shadow-[0_20px_70px_rgba(0,0,0,0.05)]">
+                <img
+                  src={pageImages.distressedStairwell}
+                  alt="Property needing cleanup and repair"
+                  className="h-80 w-full -rotate-90 scale-[1.3] object-cover"
+                />
+              </div>
+              <div className="overflow-hidden rounded-[2rem] border border-black/10 bg-white/75 shadow-[0_20px_70px_rgba(0,0,0,0.05)]">
+                <img
+                  src={pageImages.damagedPorch}
+                  alt="Porch and doorway showing deferred maintenance"
+                  className="h-80 w-full object-cover"
+                />
+              </div>
             </div>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
@@ -227,6 +341,23 @@ export default function Home() {
                 </p>
               </div>
             ))}
+            <div className="rounded-[1.75rem] border border-black/10 bg-white/85 p-6 md:col-span-2">
+              <p className="text-xs font-medium uppercase tracking-[0.3em] text-neutral-400">
+                Why sellers reach out
+              </p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {sellerReasons.concat(["Needs cleanup before listing", "Just wants to know their options"]).map(
+                  (reason) => (
+                    <div
+                      key={reason}
+                      className="rounded-2xl border border-black/8 bg-[#f8f5ee] px-4 py-3 text-sm text-neutral-700"
+                    >
+                      {reason}
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -246,6 +377,20 @@ export default function Home() {
                   If you are even thinking about selling, send the details and
                   we will follow up with a simple next step.
                 </p>
+                <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm text-white/72">
+                  <a
+                    href={contactDetails.phoneHref}
+                    className="font-medium text-white"
+                  >
+                    {contactDetails.phone}
+                  </a>
+                  <a
+                    href={contactDetails.emailHref}
+                    className="text-white/80"
+                  >
+                    {contactDetails.email}
+                  </a>
+                </div>
               </div>
               <div className="flex flex-wrap gap-3">
                 <Link
