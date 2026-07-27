@@ -22,4 +22,7 @@ export DATABASE_URL="${DATABASE_URL:-file:$PERSISTED_DB_PATH}"
 export HOSTNAME="${HOSTNAME:-0.0.0.0}"
 export PORT="${PORT:-3000}"
 
+# Ensure required tables exist in fresh/persisted SQLite before app boot.
+npx prisma db push --accept-data-loss
+
 exec npx next start -H "$HOSTNAME" -p "$PORT"

@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/app/lib/prisma";
-import { getAuthenticatedUser, isAdmin } from "@/app/lib/auth";
+import { canAccessPage, getAuthenticatedUser } from "@/app/lib/auth";
 import { isOpenClawAuthorized } from "@/app/api/schedule-today/route";
 
 export const dynamic = "force-dynamic";
@@ -49,7 +49,7 @@ export async function PATCH(
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!hasBearer && !isAdmin(currentUser)) {
+    if (!hasBearer && !canAccessPage(currentUser, "schedule")) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 

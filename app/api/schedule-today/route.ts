@@ -139,8 +139,6 @@ export async function GET(req: NextRequest) {
             address: findAddress(record.body),
             priority: PRIORITIES.has(record.priority) ? record.priority : "Medium",
             dueAt: record.followUpAt,
-            completed: false,
-            status: "Queued",
           },
           create: {
             dateKey,
@@ -216,11 +214,16 @@ export async function GET(req: NextRequest) {
       };
     });
 
+    const visibleCards =
+      currentUser?.recordsScope === "contract-only"
+        ? enrichedCards.filter((card) => card.stage === "Contract")
+        : enrichedCards;
+
     return Response.json({
       success: true,
       dateKey,
-      count: enrichedCards.length,
-      cards: enrichedCards,
+      count: visibleCards.length,
+      cards: visibleCards,
     });
   } catch (error) {
     console.error("Failed to fetch schedule cards", error);

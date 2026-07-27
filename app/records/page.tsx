@@ -50,6 +50,20 @@ type PipelineCard = {
   tone: string;
 };
 
+type ScheduleApiCard = {
+  completed: boolean;
+  dueAt: string | null;
+  nextFollowUpDate?: string | null;
+};
+
+type ScheduleSnapshot = {
+  dateKey: string;
+  overdue: number;
+  dueToday: number;
+  nextUp: number;
+  finished: number;
+};
+
 function buildRecordEditForm(record: RecordItem): EditForm {
   return {
     list: record.list,
@@ -93,6 +107,8 @@ const SELLER_LISTS = [
   "Contract",
   "Closed",
 ] as const;
+
+const ACTIVE_FOLLOW_UP_LISTS = ["Leads", "Opportunity", "Appointment"] as const;
 
 const PIPELINE_LABELS = {
   Leads: "Lead",
@@ -156,6 +172,57 @@ function getMonthStart(date: Date) {
 
 function getMonthEnd(date: Date) {
   return new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
+}
+
+function getStartOfToday() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+}
+
+function getEndOfToday() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+}
+
+function getEndOfTomorrow() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 23, 59, 59, 999);
+}
+
+function getCardScheduleAt(card: ScheduleApiCard) {
+  const value = card.nextFollowUpDate || card.dueAt;
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function buildScheduleSnapshot(cards: ScheduleApiCard[], dateKey: string): ScheduleSnapshot {
+  const startOfToday = getStartOfToday();
+  const endOfToday = getEndOfToday();
+  const endOfTomorrow = getEndOfTomorrow();
+  const activeCards = cards.filter((card) => !card.completed);
+
+  const overdue = activeCards.filter((card) => {
+    const scheduleAt = getCardScheduleAt(card);
+    return scheduleAt ? scheduleAt < startOfToday : false;
+  }).length;
+  const dueToday = activeCards.filter((card) => {
+    const scheduleAt = getCardScheduleAt(card);
+    return scheduleAt ? scheduleAt >= startOfToday && scheduleAt <= endOfToday : false;
+  }).length;
+  const nextUp = activeCards.filter((card) => {
+    const scheduleAt = getCardScheduleAt(card);
+    return scheduleAt ? scheduleAt > endOfToday && scheduleAt <= endOfTomorrow : false;
+  }).length;
+  const finished = cards.filter((card) => card.completed).length;
+
+  return {
+    dateKey,
+    overdue,
+    dueToday,
+    nextUp,
+    finished,
+  };
 }
 
 function getListAnchor(listName: string) {
@@ -303,6 +370,8 @@ export default function RecordsPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<EditForm | null>(null);
   const [savingId, setSavingId] = useState<number | null>(null);
+  const [movingStageId, setMovingStageId] = useState<number | null>(null);
+  const [scheduleSnapshot, setScheduleSnapshot] = useState<ScheduleSnapshot | null>(null);
   const [sidebarWidth, setSidebarWidth] = useState(320);
   const [sidebarSearch, setSidebarSearch] = useState("");
 
@@ -313,24 +382,49 @@ export default function RecordsPage() {
   }, [isInitialized, isLoggedIn, router]);
 
   useEffect(() => {
-    async function fetchRecords() {
+    async function fetchRecordsAndSchedule() {
       try {
-        const res = await fetch("/api/records", { cache: "no-store" });
-        if (res.ok) {
-          const data = await res.json();
+        const [recordsRes, scheduleRes] = await Promise.all([
+          fetch("/api/records", { cache: "no-store" }),
+          fetch("/api/schedule-today", { cache: "no-store" }),
+        ]);
+
+        if (recordsRes.ok) {
+          const data = await recordsRes.json();
           setRecords(data);
         }
+
+        if (scheduleRes.ok) {
+          const data = await scheduleRes.json();
+          const cards = (data.cards || []) as ScheduleApiCard[];
+          setScheduleSnapshot(buildScheduleSnapshot(cards, data.dateKey || ""));
+        }
       } catch (error) {
-        console.error("Failed to fetch records", error);
+        console.error("Failed to fetch records and schedule", error);
       } finally {
         setLoading(false);
       }
     }
 
     if (isLoggedIn) {
-      void fetchRecords();
+      void fetchRecordsAndSchedule();
     }
   }, [isLoggedIn]);
+
+  async function refreshScheduleSnapshot() {
+    try {
+      const res = await fetch("/api/schedule-today", { cache: "no-store" });
+      if (!res.ok) {
+        return;
+      }
+
+      const data = await res.json();
+      const cards = (data.cards || []) as ScheduleApiCard[];
+      setScheduleSnapshot(buildScheduleSnapshot(cards, data.dateKey || ""));
+    } catch (error) {
+      console.error("Failed to refresh schedule snapshot", error);
+    }
+  }
 
   async function handleLogout() {
     await logout();
@@ -374,6 +468,7 @@ export default function RecordsPage() {
 
       const updated = await res.json();
       setRecords((prev) => prev.map((record) => (record.id === id ? updated : record)));
+      await refreshScheduleSnapshot();
       cancelEditing();
     } catch (error) {
       console.error("Failed to update record", error);
@@ -400,6 +495,7 @@ export default function RecordsPage() {
       }
 
       setRecords((prev) => prev.filter((record) => record.id !== id));
+      await refreshScheduleSnapshot();
 
       if (editingId === id) {
         cancelEditing();
@@ -407,6 +503,47 @@ export default function RecordsPage() {
     } catch (error) {
       console.error("Failed to delete record", error);
       alert("Failed to delete record");
+    }
+  }
+
+  async function quickMoveRecord(item: RecordItem, nextList: string) {
+    if (nextList === item.list) {
+      return;
+    }
+
+    const needsFollowUp = ACTIVE_FOLLOW_UP_LISTS.includes(
+      nextList as (typeof ACTIVE_FOLLOW_UP_LISTS)[number]
+    );
+    const fallbackFollowUpAt = needsFollowUp
+      ? item.followUpAt || new Date(Date.now() + 60 * 60 * 1000).toISOString()
+      : null;
+
+    try {
+      setMovingStageId(item.id);
+      const res = await fetch("/api/records", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: item.id,
+          list: nextList,
+          followUpAt: fallbackFollowUpAt,
+          completed: nextList === "Closed",
+        }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null);
+        throw new Error(errorData?.error || "Failed to move record");
+      }
+
+      const updated = await res.json();
+      setRecords((prev) => prev.map((record) => (record.id === item.id ? updated : record)));
+      await refreshScheduleSnapshot();
+    } catch (error) {
+      console.error("Failed to move record", error);
+      alert(error instanceof Error ? error.message : "Failed to move record");
+    } finally {
+      setMovingStageId(null);
     }
   }
 
@@ -681,6 +818,51 @@ export default function RecordsPage() {
               </div>
             </div>
 
+            <div className="mt-3 rounded-2xl bg-stone-50 px-4 py-3">
+              <div className="text-[11px] uppercase tracking-[0.2em] text-stone-500">
+                What&apos;s going on
+              </div>
+              <div className="mt-2 grid gap-2 text-sm text-slate-700 md:grid-cols-3">
+                <div>
+                  <span className="font-semibold text-slate-900">Status:</span>{" "}
+                  {item.completed ? "Finished" : item.status || "Active"}
+                </div>
+                <div>
+                  <span className="font-semibold text-slate-900">Last Outcome:</span>{" "}
+                  {item.lastContactOutcome || "Not set"}
+                </div>
+                <div>
+                  <span className="font-semibold text-slate-900">Follow-Ups:</span>{" "}
+                  {item.followUpCount || 0}
+                </div>
+              </div>
+            </div>
+
+            {canEdit ? (
+              <div className="mt-3 rounded-2xl border border-stone-200 bg-white px-4 py-3">
+                <div className="text-[11px] uppercase tracking-[0.2em] text-stone-500">
+                  Quick Stage Change
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <select
+                    value={item.list}
+                    onChange={(event) => void quickMoveRecord(item, event.target.value)}
+                    disabled={movingStageId === item.id}
+                    className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-slate-800"
+                  >
+                    {LIST_ORDER.map((option) => (
+                      <option key={option} value={option}>
+                        {getListDisplayName(option)}
+                      </option>
+                    ))}
+                  </select>
+                  {movingStageId === item.id ? (
+                    <span className="text-xs text-slate-500">Updating stage...</span>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+
             <div className="mt-3">
               <div className="text-[11px] uppercase tracking-[0.2em] text-stone-500">
                 Notes / Summary
@@ -835,6 +1017,45 @@ export default function RecordsPage() {
               Logout
             </button>
           </div>
+
+          {scheduleSnapshot ? (
+            <div className="mt-4 rounded-2xl border border-stone-200 bg-stone-50 px-4 py-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-stone-500">
+                  Schedule Today Sync
+                </div>
+                <div className="text-xs text-stone-500">
+                  {scheduleSnapshot.dateKey || "Today"}
+                </div>
+              </div>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2">
+                  <div className="text-[11px] uppercase tracking-[0.2em] text-rose-700">Overdue</div>
+                  <div className="mt-1 text-lg font-semibold text-rose-900">
+                    {scheduleSnapshot.overdue}
+                  </div>
+                </div>
+                <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2">
+                  <div className="text-[11px] uppercase tracking-[0.2em] text-red-700">Due Today</div>
+                  <div className="mt-1 text-lg font-semibold text-red-900">
+                    {scheduleSnapshot.dueToday}
+                  </div>
+                </div>
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
+                  <div className="text-[11px] uppercase tracking-[0.2em] text-amber-700">Next Up</div>
+                  <div className="mt-1 text-lg font-semibold text-amber-900">
+                    {scheduleSnapshot.nextUp}
+                  </div>
+                </div>
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2">
+                  <div className="text-[11px] uppercase tracking-[0.2em] text-emerald-700">Finished</div>
+                  <div className="mt-1 text-lg font-semibold text-emerald-900">
+                    {scheduleSnapshot.finished}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <div

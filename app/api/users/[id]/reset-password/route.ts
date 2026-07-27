@@ -1,11 +1,11 @@
-import { NextResponse } from "next/server";
-import bcrypt from "bcrypt";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/app/lib/prisma";
 
 export async function POST(
-  req: Request,
-  { params }: { params: { id: string } }
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await context.params;
   const { newPassword } = await req.json();
 
   if (!newPassword || newPassword.length < 8) {
@@ -15,11 +15,9 @@ export async function POST(
     );
   }
 
-  const passwordHash = await bcrypt.hash(newPassword, 12);
-
   await prisma.user.update({
-    where: { id: params.id },
-    data: { passwordHash },
+    where: { id: Number(id) },
+    data: { password: newPassword },
   });
 
   return NextResponse.json({ ok: true });
