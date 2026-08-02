@@ -127,6 +127,8 @@ const LEAD_SOURCE_OPTIONS = [
   "Subgen",
 ] as const;
 
+const RAILWAY_LEAD_SOURCE_OPTIONS = ["FizzyLead", "Realsupermarket", "Mailing"] as const;
+
 const PRIORITY_OPTIONS = ["Low", "Medium", "High", "Urgent"] as const;
 
 const CONTACT_OUTCOME_OPTIONS = [
@@ -374,6 +376,20 @@ export default function RecordsPage() {
   const [scheduleSnapshot, setScheduleSnapshot] = useState<ScheduleSnapshot | null>(null);
   const [sidebarWidth, setSidebarWidth] = useState(320);
   const [sidebarSearch, setSidebarSearch] = useState("");
+  const [isRailwayHost, setIsRailwayHost] = useState(false);
+
+  const leadSourceOptions = useMemo(
+    () =>
+      isRailwayHost
+        ? [...LEAD_SOURCE_OPTIONS, ...RAILWAY_LEAD_SOURCE_OPTIONS]
+        : LEAD_SOURCE_OPTIONS,
+    [isRailwayHost]
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setIsRailwayHost(window.location.hostname.toLowerCase().includes("railway.app"));
+  }, []);
 
   useEffect(() => {
     if (isInitialized === false || (isInitialized === true && !isLoggedIn)) {
@@ -720,7 +736,7 @@ export default function RecordsPage() {
                     }
                   >
                     <option value="">Lead Source</option>
-                    {LEAD_SOURCE_OPTIONS.map((option) => (
+                    {leadSourceOptions.map((option) => (
                       <option key={option} value={option}>
                         {option}
                       </option>
